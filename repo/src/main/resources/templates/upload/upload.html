@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Upload Files</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2>Upload Campaign Attachments</h2>
+        <p class="text-muted mb-0">Resumable, chunked uploads. PDF and image files up to 50&nbsp;MB.</p>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" th:action="@{/files/upload}" class="row g-2 align-items-end m-0">
+                <div class="col-md-6">
+                    <label class="form-label">Target campaign</label>
+                    <select name="campaignId" class="form-select" required>
+                        <option value="">Select campaign…</option>
+                        <option th:each="c : ${campaigns}"
+                                th:value="${c.id}"
+                                th:text="${c.name + ' (' + c.status + ')'}"
+                                th:selected="${selectedCampaignId != null and selectedCampaignId == c.id}">name</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-outline-primary">Choose</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div th:if="${selectedCampaignId != null}">
+        <div class="card mb-3">
+            <div class="card-header">Upload</div>
+            <div class="card-body">
+                <div id="upload-zone" class="upload-zone">
+                    <div class="upload-icon"><i class="bi bi-cloud-upload"></i></div>
+                    <strong>Drag &amp; drop a file here</strong>
+                    <div class="text-muted">or click to browse</div>
+                    <input type="file" id="file-input" class="d-none"
+                           accept="application/pdf,image/png,image/jpeg,image/gif"/>
+                </div>
+
+                <div id="upload-progress" class="mt-3 d-none">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <strong id="uploading-name">file.pdf</strong>
+                        <span id="upload-status-badge" class="status-badge status-pending">UPLOADING</span>
+                    </div>
+                    <div class="progress" style="height: 12px;">
+                        <div id="upload-bar" class="progress-bar" style="width: 0%;">0%</div>
+                    </div>
+                    <small class="text-muted" id="chunk-counter">0 of 0 chunks received</small>
+                    <div id="finalized" class="mt-2 d-none">
+                        <span class="status-badge status-active">COMPLETE</span>
+                        <div class="text-muted mt-1">SHA-256: <code id="sha256">...</code></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Version History</div>
+            <div class="card-body p-0">
+                <div th:if="${#lists.isEmpty(attachments)}" class="empty-state">
+                    <div class="empty-icon"><i class="bi bi-files"></i></div>
+                    <h3>No attachments yet</h3>
+                    <p>Upload a file above to populate the version history.</p>
+                </div>
+                <table th:if="${not #lists.isEmpty(attachments)}" class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Version</th>
+                            <th>Size</th>
+                            <th>Uploaded by</th>
+                            <th>Date</th>
+                            <th>Checksum</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="a : ${attachments}">
+                            <td><strong th:text="${a.originalFilename}">file</strong></td>
+                            <td>v<span th:text="${a.version}">1</span></td>
+                            <td th:text="${a.fileSizeBytes} + ' B'">size</td>
+                            <td th:text="${a.uploadedBy}">user</td>
+                            <td th:text="${#temporals.format(a.uploadedAt, 'yyyy-MM-dd HH:mm')}">date</td>
+                            <td><code style="font-size:11px;" th:text="${#strings.substring(a.sha256Checksum, 0, 16)} + '…'">hash</code></td>
+                            <td>
+                                <a th:href="@{'/files/attachment/' + ${a.id} + '/download'}"
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${selectedCampaignId == null}" class="empty-state">
+        <div class="empty-icon"><i class="bi bi-folder2-open"></i></div>
+        <h3>Pick a campaign</h3>
+        <p>Choose the campaign you want to upload attachments for.</p>
+    </div>
+</div>
+<th:block layout:fragment="scripts">
+    <script th:if="${selectedCampaignId != null}"
+            th:inline="javascript">
+        window.RC_CAMPAIGN_ID = /*[[${selectedCampaignId}]]*/ 0;
+    </script>
+    <script th:src="@{/js/upload.js}"></script>
+</th:block>
+</body>
+</html>

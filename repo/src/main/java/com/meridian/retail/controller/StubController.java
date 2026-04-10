@@ -39,8 +39,7 @@ public class StubController {
 
     @GetMapping("/upload")
     @PreAuthorize("hasAnyRole('OPERATIONS','ADMIN')")
-    public String uploadLanding(Model model) {
-        model.addAttribute("breadcrumb", "Upload Files");
-        return "dashboard/ops"; // replaced in Phase 4
+    public String uploadLanding() {
+        return "redirect:/files/upload";
     }
 }
