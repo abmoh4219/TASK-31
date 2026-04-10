@@ -1,6 +1,7 @@
 package com.meridian.retail.security;
 
 import com.meridian.retail.integration.AbstractIntegrationTest;
+import com.meridian.retail.security.RequestSigningFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -24,6 +25,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SecurityIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired MockMvc mockMvc;
+
+    /**
+     * Inject the actual filter bean so the test computes the form-mode signature with
+     * the SAME secret + algorithm the running filter uses, regardless of which profile
+     * (test/docker/prod) supplied {@code app.signing.secret}. This avoids any drift
+     * between hardcoded test values and the active configuration.
+     */
+    @Autowired RequestSigningFilter requestSigningFilter;
 
     @Test
     void anonymousAccessRedirectsToLogin() throws Exception {
@@ -120,8 +129,10 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
         String nonce = java.util.UUID.randomUUID().toString();
         String timestamp = String.valueOf(System.currentTimeMillis());
         String path = "/admin/does-not-exist";
-        // Compute the form-mode signature with the same secret as application.yml.
-        String signature = signFormCanonical("POST", path, timestamp, nonce);
+        // Use the live filter bean to compute the signature, so the test always uses
+        // the same secret as the running application context. This is the same canonical
+        // (method + path + timestamp + nonce) the filter validates against.
+        String signature = requestSigningFilter.signFormCanonical("POST", path, timestamp, nonce);
 
         mockMvc.perform(post(path)
                         .contentType("application/x-www-form-urlencoded")
@@ -157,16 +168,6 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
-    private String signFormCanonical(String method, String path, String timestamp, String nonce)
-            throws Exception {
-        String secret = "retail-campaign-hmac-signing-key!!";
-        String canonical = method + "\n" + path + "\n" + timestamp + "\n" + nonce;
-        javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
-        mac.init(new javax.crypto.spec.SecretKeySpec(
-                secret.getBytes(java.nio.charset.StandardCharsets.UTF_8), "HmacSHA256"));
-        byte[] sig = mac.doFinal(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        return java.util.HexFormat.of().formatHex(sig);
-    }
 
     /** HIGH #6: coupon list must be reachable for authenticated users. */
     @Test
