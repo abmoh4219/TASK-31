@@ -27,6 +27,7 @@ class UserServiceTest {
     @Mock PasswordEncoder passwordEncoder;
     @org.mockito.Spy PasswordValidationService passwordValidationService = new PasswordValidationService();
     @Mock AuditLogService auditLogService;
+    @Mock com.meridian.retail.anomaly.ChangeEventService changeEventService;
     @InjectMocks UserService svc;
 
     @Test

@@ -1,5 +1,6 @@
 package com.meridian.retail.service;
 
+import com.meridian.retail.anomaly.ChangeEventService;
 import com.meridian.retail.audit.AuditAction;
 import com.meridian.retail.audit.AuditLogService;
 import com.meridian.retail.entity.User;
@@ -34,6 +35,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final PasswordValidationService passwordValidationService;
     private final AuditLogService auditLogService;
+    private final ChangeEventService changeEventService;
 
     public List<User> listAll() {
         return userRepository.findAll();
@@ -117,5 +119,8 @@ public class UserService {
         auditLogService.log(AuditAction.USER_DEACTIVATED, "User", id,
                 Map.of("active", true), Map.of("active", false),
                 operatorUsername, ipAddress);
+        // Deactivation is a soft delete for a user account — emit a DELETE change event
+        // so the anomaly detector counts it toward mass-deletion detection.
+        changeEventService.record("DELETE", "User", id, operatorUsername);
     }
 }

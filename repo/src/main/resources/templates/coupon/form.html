@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title th:text="${editing} ? 'Edit Coupon' : 'New Coupon'">Coupon</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2 th:text="${editing} ? 'Edit Coupon' : 'New Coupon'">Coupon</h2>
+        <p class="text-muted mb-0">Coupon code is permanent once created — only discount terms and limits can be edited.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <form th:action="${editing} ? @{'/coupons/' + ${couponId}} : @{/coupons}"
+                  th:object="${coupon}" method="post">
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Campaign</label>
+                        <select th:field="*{campaignId}" class="form-select" required>
+                            <option value="">Select campaign…</option>
+                            <option th:each="c : ${campaigns}"
+                                    th:value="${c.id}"
+                                    th:text="${c.name + ' (' + c.status + ')'}">name</option>
+                        </select>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('campaignId')}"
+                             th:errors="*{campaignId}">err</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Coupon Code</label>
+                        <input type="text" th:field="*{code}" class="form-control"
+                               th:readonly="${editing}" required maxlength="50"
+                               th:attr="hx-get=${editing} ? null : @{/coupons/check-code},
+                                        hx-trigger='keyup changed delay:400ms',
+                                        hx-target='#code-feedback',
+                                        hx-include='this',
+                                        name='code'"/>
+                        <div id="code-feedback"></div>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('code')}"
+                             th:errors="*{code}">err</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Discount Type</label>
+                        <select th:field="*{discountType}" class="form-select" required>
+                            <option th:each="t : ${discountTypes}"
+                                    th:value="${t}" th:text="${t}">PERCENT</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Discount Value</label>
+                        <input type="number" step="0.01" th:field="*{discountValue}"
+                               class="form-control" required/>
+                        <div class="text-danger small" th:if="${#fields.hasErrors('discountValue')}"
+                             th:errors="*{discountValue}">err</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Minimum Purchase</label>
+                        <input type="number" step="0.01" th:field="*{minPurchaseAmount}"
+                               class="form-control" min="0"/>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Maximum Uses</label>
+                        <input type="number" th:field="*{maxUses}" class="form-control" min="0"/>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Valid From</label>
+                        <input type="date" th:field="*{validFrom}" class="form-control"/>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Valid Until</label>
+                        <input type="date" th:field="*{validUntil}" class="form-control"/>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Mutual Exclusion Group</label>
+                        <input type="text" th:field="*{mutualExclusionGroup}"
+                               class="form-control" maxlength="100"
+                               placeholder="optional — e.g. BLACK_FRIDAY"/>
+                        <small class="text-muted">
+                            Coupons in the same group cannot be combined on one order.
+                        </small>
+                    </div>
+
+                    <div class="col-md-6 d-flex align-items-center">
+                        <div class="form-check mt-3">
+                            <input type="checkbox" th:field="*{stackable}" class="form-check-input" id="stackable"/>
+                            <label class="form-check-label" for="stackable">
+                                <strong>Stackable</strong>
+                                <div class="text-muted small">Can be combined with other stackable coupons.</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i>
+                        <span th:text="${editing} ? 'Save Changes' : 'Create Coupon'">Save</span>
+                    </button>
+                    <a th:href="@{/coupons}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

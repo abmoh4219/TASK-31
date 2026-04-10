@@ -107,4 +107,54 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(get("/health"))
                 .andExpect(status().isOk());
     }
+
+    /**
+     * BLOCKER #1 regression — admin form POSTs must NOT be blocked by the anti-replay
+     * nonce filter. Before the fix any POST under /admin/** without X-Nonce + X-Timestamp
+     * was rejected with 400, breaking every admin UI action.
+     */
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void adminFormPostNotBlockedByNonceFilter() throws Exception {
+        // POST to a non-existent admin endpoint — we expect 4xx (404) but crucially
+        // NOT 400 "Missing X-Nonce" and NOT 403 "Invalid request signature".
+        mockMvc.perform(post("/admin/does-not-exist")
+                        .contentType("application/x-www-form-urlencoded")
+                        .param("foo", "bar")
+                        .with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    /** HIGH #6: coupon list must be reachable for authenticated users. */
+    @Test
+    @WithMockUser(username = "ops", roles = {"OPERATIONS"})
+    void couponListReachableForOps() throws Exception {
+        mockMvc.perform(get("/coupons"))
+                .andExpect(status().isOk());
+    }
+
+    /** HIGH #6: coupon new form must be reachable for admin. */
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void couponNewFormReachableForAdmin() throws Exception {
+        mockMvc.perform(get("/coupons/new"))
+                .andExpect(status().isOk());
+    }
+
+    /** HIGH #7: role-changes page reachable for admin. */
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void roleChangesPageReachableForAdmin() throws Exception {
+        mockMvc.perform(get("/admin/role-changes"))
+                .andExpect(status().isOk());
+    }
+
+    /** HIGH #9: trends endpoint returns JSON for analytics users. */
+    @Test
+    @WithMockUser(username = "finance", roles = {"FINANCE"})
+    void analyticsTrendsReachable() throws Exception {
+        mockMvc.perform(get("/analytics/trends"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("application/json"));
+    }
 }

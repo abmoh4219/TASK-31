@@ -5,6 +5,7 @@ import com.meridian.retail.entity.TempDownloadLink;
 import com.meridian.retail.entity.UploadSession;
 import com.meridian.retail.repository.CampaignAttachmentRepository;
 import com.meridian.retail.repository.CampaignRepository;
+import com.meridian.retail.security.CampaignAccessPolicy;
 import com.meridian.retail.storage.ChunkedUploadService;
 import com.meridian.retail.storage.LinkExpiredException;
 import com.meridian.retail.storage.MaskedDownloadService;
@@ -52,6 +53,7 @@ public class FileController {
     private final MaskedDownloadService maskedDownloadService;
     private final CampaignAttachmentRepository attachmentRepository;
     private final CampaignRepository campaignRepository;
+    private final CampaignAccessPolicy campaignAccessPolicy;
 
     /** Upload landing page (drag-and-drop UI). */
     @GetMapping("/upload")
@@ -107,9 +109,24 @@ public class FileController {
     @PreAuthorize("hasAnyRole('OPERATIONS','ADMIN')")
     @ResponseBody
     public Map<String, Object> finalizeUpload(@PathVariable String uploadId,
+                                              @RequestParam(value = "internalOnly", required = false, defaultValue = "false") boolean internalOnly,
+                                              @RequestParam(value = "maskedRoles", required = false) List<String> maskedRoles,
                                               Authentication auth,
                                               HttpServletRequest httpRequest) {
-        CampaignAttachment saved = chunkedUploadService.finalizeUpload(uploadId, auth.getName(), clientIp(httpRequest));
+        // Build a tiny JSON array of the selected roles — stored verbatim on the attachment
+        // row and later checked by MaskedDownloadService.canAccessOriginal (substring match).
+        String maskedJson = null;
+        if (maskedRoles != null && !maskedRoles.isEmpty()) {
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < maskedRoles.size(); i++) {
+                if (i > 0) sb.append(",");
+                sb.append("\"").append(maskedRoles.get(i).replace("\"", "")).append("\"");
+            }
+            sb.append("]");
+            maskedJson = sb.toString();
+        }
+        CampaignAttachment saved = chunkedUploadService.finalizeUpload(
+                uploadId, auth.getName(), clientIp(httpRequest), internalOnly, maskedJson);
         return Map.of(
                 "id", saved.getId(),
                 "filename", saved.getOriginalFilename(),
@@ -119,11 +136,22 @@ public class FileController {
         );
     }
 
-    /** Generates a temp link bound to current user, redirects to it. */
+    /**
+     * Generates a temp link bound to current user, redirects to it.
+     *
+     * Object-level authorization: before issuing a token we verify the caller has access
+     * to the parent campaign via CampaignAccessPolicy. Without this check any authenticated
+     * user could enumerate attachment IDs and fetch files from campaigns they have no
+     * business seeing.
+     */
     @GetMapping("/attachment/{id}/download")
     public String requestDownload(@PathVariable Long id,
                                   Authentication auth,
                                   HttpServletRequest httpRequest) {
+        CampaignAttachment attachment = attachmentRepository.findById(id)
+                .orElseThrow(() -> new StorageException("Attachment not found: " + id));
+        campaignAccessPolicy.requireCampaignAccess(attachment.getCampaignId(), auth);
+
         TempDownloadLink link = tempLinkService.generate(id, auth.getName(), clientIp(httpRequest));
         return "redirect:/files/download/" + link.getToken();
     }
@@ -146,6 +174,16 @@ public class FileController {
         }
 
         CampaignAttachment attachment = resolved.attachment();
+
+        // Re-check campaign-level authorization at the moment of download. Tokens are
+        // short-lived but permissions may have been revoked between issue and use; don't
+        // trust the token alone for access control.
+        if (!campaignAccessPolicy.canAccessCampaign(attachment.getCampaignId(), auth)) {
+            response.sendError(HttpStatus.FORBIDDEN.value(),
+                    "You do not have access to this campaign's files");
+            return;
+        }
+
         String role = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .findFirst().orElse("ROLE_USER")
@@ -164,9 +202,10 @@ public class FileController {
 
     /** Version history page for an attachment. */
     @GetMapping("/attachment/{id}/history")
-    public String history(@PathVariable Long id, Model model) {
+    public String history(@PathVariable Long id, Authentication auth, Model model) {
         CampaignAttachment current = attachmentRepository.findById(id)
                 .orElseThrow(() -> new StorageException("Attachment not found: " + id));
+        campaignAccessPolicy.requireCampaignAccess(current.getCampaignId(), auth);
         model.addAttribute("breadcrumb", "Attachment History");
         model.addAttribute("current", current);
         model.addAttribute("versions",

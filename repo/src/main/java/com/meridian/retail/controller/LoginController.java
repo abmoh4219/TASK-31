@@ -16,11 +16,15 @@ public class LoginController {
     public String login(@RequestParam(required = false) String error,
                         @RequestParam(required = false) String locked,
                         @RequestParam(required = false) String ipblocked,
+                        @RequestParam(required = false) String captcha,
                         @RequestParam(required = false) String logout,
                         HttpSession session,
                         Model model) {
 
-        if (error != null) {
+        if (captcha != null) {
+            model.addAttribute("errorMessage",
+                    "CAPTCHA was missing or incorrect. Please solve the challenge and try again.");
+        } else if (error != null) {
             model.addAttribute("errorMessage", "Invalid username or password.");
         } else if (locked != null) {
             model.addAttribute("errorMessage",

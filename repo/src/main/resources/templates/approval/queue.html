@@ -18,7 +18,13 @@
     </div>
 
     <div class="row g-3" th:if="${not #lists.isEmpty(queueItems)}">
-        <div class="col-md-6" th:each="q : ${queueItems}">
+        <div class="col-md-6" th:each="q : ${queueItems}"
+             th:with="isHigh=${q.riskLevel.name() == 'HIGH'},
+                      dual=${dualByQueue != null ? dualByQueue.get(q.id) : null},
+                      firstDone=${dual != null and dual.approver1Username != null},
+                      currentUser=${#authentication.name},
+                      isFirstApprover=${dual != null and dual.approver1Username != null
+                                         and #strings.equalsIgnoreCase(dual.approver1Username, currentUser)}">
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <span>Campaign #<span th:text="${q.campaignId}">id</span></span>
@@ -30,12 +36,22 @@
                     <div class="mb-2"><strong>Submitted by:</strong> <span th:text="${q.requestedBy}">user</span></div>
                     <div class="mb-2"><strong>Created:</strong>
                         <span th:text="${#temporals.format(q.createdAt, 'yyyy-MM-dd HH:mm')}">date</span></div>
-                    <div class="mb-3" th:if="${q.riskLevel.name() == 'HIGH'}">
+                    <div class="mb-2"><strong>Status:</strong>
+                        <span class="badge bg-secondary" th:text="${q.status}">STATUS</span></div>
+                    <div class="mb-3" th:if="${isHigh}">
                         <span class="status-badge status-high">
                             <i class="bi bi-shield-exclamation"></i> Requires dual approval
                         </span>
+                        <div class="small text-muted mt-1" th:if="${firstDone}">
+                            First approval by
+                            <strong th:text="${dual.approver1Username}">userA</strong>
+                            on <span th:text="${#temporals.format(dual.approver1At, 'yyyy-MM-dd HH:mm')}">time</span>
+                        </div>
                     </div>
-                    <form th:action="@{'/approval/' + ${q.id} + '/approve'}" method="post">
+
+                    <!-- LOW / MEDIUM: single-step approve/reject -->
+                    <form th:if="${not isHigh}"
+                          th:action="@{'/approval/' + ${q.id} + '/approve'}" method="post">
                         <textarea name="notes" class="form-control mb-2" rows="2"
                                   placeholder="Optional review notes"></textarea>
                         <div class="d-flex gap-2">
@@ -43,11 +59,48 @@
                                 <i class="bi bi-check-lg"></i> Approve
                             </button>
                             <button type="submit"
-                                    formaction="/approval/__id__/reject"
                                     th:formaction="@{'/approval/' + ${q.id} + '/reject'}"
                                     class="btn btn-sm btn-outline-danger">
                                 <i class="bi bi-x-lg"></i> Reject
                             </button>
+                        </div>
+                    </form>
+
+                    <!-- HIGH: first approval (not yet recorded) -->
+                    <form th:if="${isHigh and not firstDone}"
+                          th:action="@{'/approval/' + ${q.id} + '/approve-first'}" method="post">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-sm btn-warning">
+                                <i class="bi bi-person-check"></i> First Approval
+                            </button>
+                            <button type="submit"
+                                    th:formaction="@{'/approval/' + ${q.id} + '/reject'}"
+                                    class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-lg"></i> Reject
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- HIGH: second approval (first already recorded) -->
+                    <form th:if="${isHigh and firstDone}"
+                          th:action="@{'/approval/' + ${q.id} + '/approve-second'}" method="post">
+                        <textarea name="notes" class="form-control mb-2" rows="2"
+                                  placeholder="Optional review notes"></textarea>
+                        <div class="d-flex gap-2">
+                            <button type="submit"
+                                    class="btn btn-sm btn-primary"
+                                    th:disabled="${isFirstApprover}"
+                                    th:title="${isFirstApprover} ? 'Two-eyes: you recorded the first approval; a different reviewer must complete it' : 'Complete dual approval'">
+                                <i class="bi bi-check2-all"></i> Second Approval
+                            </button>
+                            <button type="submit"
+                                    th:formaction="@{'/approval/' + ${q.id} + '/reject'}"
+                                    class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-lg"></i> Reject
+                            </button>
+                        </div>
+                        <div class="small text-muted mt-1" th:if="${isFirstApprover}">
+                            You already recorded the first approval — a different reviewer must complete step two.
                         </div>
                     </form>
                 </div>

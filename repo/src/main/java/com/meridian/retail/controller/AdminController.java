@@ -10,7 +10,11 @@ import com.meridian.retail.repository.AnomalyAlertRepository;
 import com.meridian.retail.repository.AuditLogRepository;
 import com.meridian.retail.repository.BackupRecordRepository;
 import com.meridian.retail.repository.UserRepository;
+import com.meridian.retail.entity.RoleChangeRequest;
 import com.meridian.retail.security.PasswordComplexityException;
+import com.meridian.retail.service.CampaignValidationException;
+import com.meridian.retail.service.RoleChangeService;
+import com.meridian.retail.service.SameApproverException;
 import com.meridian.retail.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -49,19 +53,32 @@ public class AdminController {
     private final BackupService backupService;
     private final UserService userService;
     private final UserRepository userRepository;
+    private final RoleChangeService roleChangeService;
 
     @GetMapping("/audit-log")
-    public String auditLog(@RequestParam(defaultValue = "0") int page, Model model) {
+    public String auditLog(@RequestParam(defaultValue = "0") int page,
+                           Authentication auth,
+                           HttpServletRequest httpRequest,
+                           Model model) {
         Page<com.meridian.retail.entity.AuditLog> entries =
                 auditLogRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, 50));
+        // Sensitive: reading the full audit trail reveals operator + entity history.
+        sensitiveAccessLogService.logAccess("audit_log", "AuditLog", null,
+                auth.getName(), clientIp(httpRequest));
         model.addAttribute("breadcrumb", "Audit Log (ADMIN ONLY)");
         model.addAttribute("entries", entries);
         return "audit/log";
     }
 
     @GetMapping("/sensitive-log")
-    public String sensitiveLog(@RequestParam(defaultValue = "0") int page, Model model) {
+    public String sensitiveLog(@RequestParam(defaultValue = "0") int page,
+                               Authentication auth,
+                               HttpServletRequest httpRequest,
+                               Model model) {
         var entries = sensitiveAccessLogService.recent(PageRequest.of(page, 50));
+        // Meta-log: reading the sensitive access log itself is sensitive.
+        sensitiveAccessLogService.logAccess("sensitive_log", "SensitiveAccessLog", null,
+                auth.getName(), clientIp(httpRequest));
         model.addAttribute("breadcrumb", "Sensitive Access Log (ADMIN ONLY)");
         model.addAttribute("entries", entries);
         return "audit/sensitive-log";
@@ -88,7 +105,12 @@ public class AdminController {
     }
 
     @GetMapping("/backup")
-    public String backupHistory(Model model) {
+    public String backupHistory(Authentication auth,
+                                HttpServletRequest httpRequest,
+                                Model model) {
+        // Sensitive: backup filenames + checksums reveal system snapshot metadata.
+        sensitiveAccessLogService.logAccess("backup_list", "BackupRecord", null,
+                auth.getName(), clientIp(httpRequest));
         model.addAttribute("breadcrumb", "Backups");
         model.addAttribute("backups", backupRecordRepository.findAllByOrderByCreatedAtDesc());
         return "admin/backup";
@@ -142,8 +164,14 @@ public class AdminController {
     }
 
     @GetMapping("/users/{id}/edit")
-    public String editUserForm(@PathVariable Long id, Model model) {
+    public String editUserForm(@PathVariable Long id,
+                               Authentication auth,
+                               HttpServletRequest httpRequest,
+                               Model model) {
         User u = userService.findById(id);
+        // Viewing a user's profile in the edit form exposes their full name + role — PII.
+        sensitiveAccessLogService.logAccess("user_profile", "User", id,
+                auth.getName(), clientIp(httpRequest));
         model.addAttribute("breadcrumb", "Edit User");
         model.addAttribute("editUser", u);
         model.addAttribute("isNew", false);
@@ -151,6 +179,12 @@ public class AdminController {
         return "admin/users-form";
     }
 
+    /**
+     * User profile update. Role changes are HIGH risk and cannot be applied here — they
+     * must go through the dual-approval flow at POST /admin/users/{id}/role-change-request.
+     * If the submitted role differs from the current role we open a role-change request
+     * instead of silently swallowing the change, so the admin gets clear feedback.
+     */
     @PostMapping("/users/{id}/update")
     public String updateUser(@PathVariable Long id,
                              @RequestParam(required = false) String fullName,
@@ -158,9 +192,94 @@ public class AdminController {
                              Authentication auth,
                              HttpServletRequest httpRequest,
                              RedirectAttributes redirect) {
-        userService.updateUser(id, fullName, role, auth.getName(), clientIp(httpRequest));
-        redirect.addFlashAttribute("successMessage", "User updated.");
+        User existing = userService.findById(id);
+        boolean roleChanged = existing.getRole() != role;
+
+        // Non-role fields update immediately. Pass current role so UserService.updateUser
+        // becomes a no-op for the role field.
+        userService.updateUser(id, fullName, existing.getRole(), auth.getName(), clientIp(httpRequest));
+
+        if (roleChanged) {
+            try {
+                roleChangeService.request(id, role, auth.getName(), clientIp(httpRequest));
+                redirect.addFlashAttribute("successMessage",
+                        "Profile updated. Role change requires dual approval — request created.");
+            } catch (CampaignValidationException e) {
+                redirect.addFlashAttribute("errorMessage", e.getMessage());
+            }
+        } else {
+            redirect.addFlashAttribute("successMessage", "User updated.");
+        }
         return "redirect:/admin/users";
+    }
+
+    // ---------- Role change dual-approval flow ----------
+
+    @GetMapping("/role-changes")
+    public String roleChangeList(Model model) {
+        model.addAttribute("breadcrumb", "Role Change Requests");
+        model.addAttribute("pending", roleChangeService.listPending());
+        model.addAttribute("history", roleChangeService.listAll());
+        return "admin/role-changes";
+    }
+
+    /** Explicit endpoint for admins to file a role change request from the UI. */
+    @PostMapping("/users/{id}/role-change-request")
+    public String requestRoleChange(@PathVariable Long id,
+                                    @RequestParam UserRole newRole,
+                                    Authentication auth,
+                                    HttpServletRequest httpRequest,
+                                    RedirectAttributes redirect) {
+        try {
+            RoleChangeRequest r = roleChangeService.request(id, newRole, auth.getName(), clientIp(httpRequest));
+            redirect.addFlashAttribute("successMessage",
+                    "Role change request #" + r.getId() + " created — awaiting dual approval.");
+        } catch (CampaignValidationException | IllegalArgumentException e) {
+            redirect.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/role-changes";
+    }
+
+    @PostMapping("/role-changes/{id}/approve-first")
+    public String approveRoleChangeFirst(@PathVariable Long id,
+                                         Authentication auth,
+                                         HttpServletRequest httpRequest,
+                                         RedirectAttributes redirect) {
+        try {
+            roleChangeService.recordFirstApproval(id, auth.getName(), clientIp(httpRequest));
+            redirect.addFlashAttribute("successMessage", "First approval recorded.");
+        } catch (SameApproverException | CampaignValidationException e) {
+            redirect.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/role-changes";
+    }
+
+    @PostMapping("/role-changes/{id}/approve-second")
+    public String approveRoleChangeSecond(@PathVariable Long id,
+                                          Authentication auth,
+                                          HttpServletRequest httpRequest,
+                                          RedirectAttributes redirect) {
+        try {
+            roleChangeService.recordSecondApproval(id, auth.getName(), clientIp(httpRequest));
+            redirect.addFlashAttribute("successMessage", "Role change applied.");
+        } catch (SameApproverException | CampaignValidationException e) {
+            redirect.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/role-changes";
+    }
+
+    @PostMapping("/role-changes/{id}/reject")
+    public String rejectRoleChange(@PathVariable Long id,
+                                   Authentication auth,
+                                   HttpServletRequest httpRequest,
+                                   RedirectAttributes redirect) {
+        try {
+            roleChangeService.reject(id, auth.getName(), clientIp(httpRequest));
+            redirect.addFlashAttribute("successMessage", "Role change rejected.");
+        } catch (CampaignValidationException e) {
+            redirect.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/admin/role-changes";
     }
 
     @PostMapping("/users/{id}/deactivate")

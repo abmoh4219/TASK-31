@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 class CampaignServiceTest {
 
-    private final CampaignService svc = new CampaignService(null, null);
+    private final CampaignService svc = new CampaignService(null, null, null);
 
     // ---- date range ----
     @Test

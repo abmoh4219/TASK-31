@@ -28,6 +28,42 @@ public class CouponService {
         return couponRepository.findByCampaignId(campaignId);
     }
 
+    public List<Coupon> listAll() {
+        return couponRepository.findAll();
+    }
+
+    public Coupon findById(Long id) {
+        return couponRepository.findById(id)
+                .orElseThrow(() -> new CampaignValidationException("Coupon not found: " + id));
+    }
+
+    /**
+     * Update a coupon. The code itself is immutable (it can be referenced from live
+     * receipts / redemption logs); only discount value, limits, dates, and stacking
+     * rules can be modified. An AuditLog row is written with before/after state.
+     */
+    @Transactional
+    public Coupon updateCoupon(Long id, CreateCouponRequest req, String username, String ipAddress) {
+        Coupon existing = findById(id);
+        CouponDTO before = CouponDTO.from(existing);
+
+        campaignService.validateDiscountValue(req.getDiscountType(), req.getDiscountValue());
+
+        existing.setDiscountType(req.getDiscountType());
+        existing.setDiscountValue(req.getDiscountValue());
+        existing.setMinPurchaseAmount(req.getMinPurchaseAmount() != null ? req.getMinPurchaseAmount() : BigDecimal.ZERO);
+        existing.setMaxUses(req.getMaxUses());
+        existing.setStackable(req.isStackable());
+        existing.setMutualExclusionGroup(XssInputSanitizer.sanitize(req.getMutualExclusionGroup()));
+        existing.setValidFrom(req.getValidFrom());
+        existing.setValidUntil(req.getValidUntil());
+
+        Coupon saved = couponRepository.save(existing);
+        auditLogService.log(AuditAction.COUPON_UPDATED, "Coupon", saved.getId(),
+                before, CouponDTO.from(saved), username, ipAddress);
+        return saved;
+    }
+
     @Transactional
     public Coupon createCoupon(CreateCouponRequest req, String username, String ipAddress) {
         // Sanitize then validate

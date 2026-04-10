@@ -76,10 +76,22 @@
             updateProgress(status.progress, status.receivedChunks.length, totalChunks);
         }
 
-        // Finalize
+        // Finalize — forward the visibility flags selected in the upload form.
+        const internalOnly = document.getElementById('internalOnly');
+        const maskedSelect = document.getElementById('maskedRoles');
+        const finParams = new URLSearchParams();
+        finParams.append('internalOnly', internalOnly && internalOnly.checked ? 'true' : 'false');
+        if (maskedSelect) {
+            Array.from(maskedSelect.selectedOptions).forEach(o => finParams.append('maskedRoles', o.value));
+        }
+
         const fin = await fetch('/files/upload/finalize/' + uploadId, {
             method: 'POST',
-            headers: { [csrfHeader]: csrfToken }
+            headers: {
+                [csrfHeader]: csrfToken,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: finParams
         });
         if (!fin.ok) { failed('Finalize failed'); return; }
         const result = await fin.json();

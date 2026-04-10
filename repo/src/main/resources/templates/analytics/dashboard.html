@@ -81,7 +81,46 @@
         </div>
     </div>
 
-    <!-- Top campaigns table + chart -->
+    <!-- Campaign-level top performers (primary) -->
+    <div class="card mb-3">
+        <div class="card-header">Top Performing Campaigns</div>
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(topByCampaign)}" class="empty-state">
+                <div class="empty-icon"><i class="bi bi-bar-chart"></i></div>
+                <h3>No campaign redemptions in range</h3>
+                <p>Try widening the date filter or removing the store filter.</p>
+            </div>
+            <table th:if="${not #lists.isEmpty(topByCampaign)}" class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Campaign</th>
+                        <th class="text-end">Redemptions</th>
+                        <th class="text-end">Total Discount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${topByCampaign}">
+                        <td>
+                            <strong th:text="${c.campaignName}">Campaign</strong>
+                            <div class="small text-muted">#<span th:text="${c.campaignId}">1</span></div>
+                        </td>
+                        <td class="text-end" th:text="${c.redemptions}">0</td>
+                        <td class="text-end" th:text="'$' + ${c.totalDiscount}">$0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Trends line chart -->
+    <div class="card mb-3">
+        <div class="card-header">Redemption Trends</div>
+        <div class="card-body">
+            <canvas id="trendsChart" height="120"></canvas>
+        </div>
+    </div>
+
+    <!-- Coupon breakdown (secondary) -->
     <div class="row g-3">
         <div class="col-md-7">
             <div class="card">
@@ -127,6 +166,47 @@
 
 <th:block layout:fragment="scripts">
     <script th:src="@{/vendor/chartjs/chart.umd.min.js}"></script>
+    <script th:inline="javascript">
+        // Line chart: fetch /analytics/trends and render date -> redemption count.
+        (function () {
+            const params = new URLSearchParams();
+            const from = /*[[${fromDate}]]*/ '';
+            const to = /*[[${toDate}]]*/ '';
+            const storeId = /*[[${storeId}]]*/ '';
+            if (from) params.append('from', from);
+            if (to) params.append('to', to);
+            if (storeId) params.append('storeId', storeId);
+            fetch('/analytics/trends?' + params.toString())
+                .then(r => r.ok ? r.json() : { points: [] })
+                .then(data => {
+                    const points = data.points || [];
+                    const labels = points.map(p => p.date);
+                    const counts = points.map(p => p.redemptions);
+                    const canvas = document.getElementById('trendsChart');
+                    if (!canvas) return;
+                    new Chart(canvas.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Daily Redemptions',
+                                data: counts,
+                                borderColor: '#3b82f6',
+                                backgroundColor: 'rgba(59,130,246,0.15)',
+                                fill: true,
+                                tension: 0.25
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true } }
+                        }
+                    });
+                })
+                .catch(() => {});
+        })();
+    </script>
     <script th:if="${not #lists.isEmpty(topCampaigns)}" th:inline="javascript">
         const labels = /*[[${topCampaigns.![code]}]]*/ [];
         const counts = /*[[${topCampaigns.![redemptions]}]]*/ [];

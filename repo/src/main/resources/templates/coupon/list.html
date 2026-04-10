@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Coupons</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Coupons</h2>
+            <p class="text-muted mb-0">All active coupon codes across campaigns.</p>
+        </div>
+        <a th:href="@{/coupons/new}" class="btn btn-primary"
+           sec:authorize="hasAnyRole('ADMIN','OPERATIONS')">
+            <i class="bi bi-plus-lg"></i> New Coupon
+        </a>
+    </div>
+
+    <div th:if="${#lists.isEmpty(coupons)}" class="empty-state">
+        <div class="empty-icon"><i class="bi bi-ticket-perforated"></i></div>
+        <h3>No coupons yet</h3>
+        <p>Create the first coupon to attach to a campaign.</p>
+    </div>
+
+    <div class="card" th:if="${not #lists.isEmpty(coupons)}">
+        <div class="card-body p-0">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Campaign</th>
+                        <th>Discount</th>
+                        <th>Min Purchase</th>
+                        <th>Max Uses</th>
+                        <th>Used</th>
+                        <th>Stackable</th>
+                        <th>Valid</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${coupons}">
+                        <td><strong><code th:text="${c.code}">CODE</code></strong></td>
+                        <td>#<span th:text="${c.campaignId}">1</span></td>
+                        <td>
+                            <span th:if="${c.discountType.name() == 'PERCENT'}"
+                                  th:text="${c.discountValue} + '%'">10%</span>
+                            <span th:if="${c.discountType.name() == 'FIXED'}"
+                                  th:text="'$' + ${c.discountValue}">$5</span>
+                        </td>
+                        <td th:text="'$' + ${c.minPurchaseAmount}">$0</td>
+                        <td th:text="${c.maxUses}">0</td>
+                        <td th:text="${c.usesCount}">0</td>
+                        <td>
+                            <span th:if="${c.stackable}" class="status-badge status-active">YES</span>
+                            <span th:unless="${c.stackable}" class="status-badge status-pending">NO</span>
+                        </td>
+                        <td class="small text-muted">
+                            <span th:text="${c.validFrom}">from</span>
+                            &rarr;
+                            <span th:text="${c.validUntil}">until</span>
+                        </td>
+                        <td sec:authorize="hasAnyRole('ADMIN','OPERATIONS')">
+                            <a th:href="@{'/coupons/' + ${c.id} + '/edit'}"
+                               class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

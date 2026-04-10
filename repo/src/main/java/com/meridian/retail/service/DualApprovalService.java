@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 /**
  * Two-eyes approval workflow for HIGH-risk campaigns and permission changes.
@@ -34,6 +35,29 @@ public class DualApprovalService {
                         .status(DualApprovalStatus.PENDING)
                         .build())
         );
+    }
+
+    /**
+     * Convenience overload: resolve (or create) the dual-approval row for a queue entry
+     * and record the first approver. Used by the approval-queue UI where the reviewer
+     * sees queue IDs, not dual-request IDs.
+     */
+    @Transactional
+    public DualApprovalRequest recordFirstForQueue(Long approvalQueueId, String approverUsername, String ipAddress) {
+        DualApprovalRequest req = initiate(approvalQueueId);
+        return recordFirst(req.getId(), approverUsername, ipAddress);
+    }
+
+    /**
+     * Same convenience for the second approver. Enforces approver1 != approver2 via the
+     * underlying recordSecond() check.
+     */
+    @Transactional
+    public DualApprovalRequest recordSecondForQueue(Long approvalQueueId, String approverUsername, String ipAddress) {
+        DualApprovalRequest req = repository.findByApprovalQueueId(approvalQueueId)
+                .orElseThrow(() -> new CampaignValidationException(
+                        "No dual approval request exists for queue entry: " + approvalQueueId));
+        return recordSecond(req.getId(), approverUsername, ipAddress);
     }
 
     @Transactional
@@ -69,6 +93,11 @@ public class DualApprovalService {
         auditLogService.log(AuditAction.DUAL_APPROVAL_SECOND, "DualApprovalRequest", saved.getId(),
                 null, saved, approverUsername, ipAddress);
         return saved;
+    }
+
+    /** Returns the dual-approval row for a given queue entry, if any. */
+    public Optional<DualApprovalRequest> findByQueueId(Long approvalQueueId) {
+        return repository.findByApprovalQueueId(approvalQueueId);
     }
 
     public boolean isComplete(Long requestId) {

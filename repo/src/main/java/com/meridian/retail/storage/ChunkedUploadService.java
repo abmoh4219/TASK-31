@@ -101,8 +101,24 @@ public class ChunkedUploadService {
         });
     }
 
+    /**
+     * Backwards-compatible: finalize without custom visibility flags — attachment is
+     * stored as public (internalOnly=false, maskedRoles=null).
+     */
     @Transactional
     public CampaignAttachment finalizeUpload(String uploadId, String username, String ipAddress) {
+        return finalizeUpload(uploadId, username, ipAddress, false, null);
+    }
+
+    /**
+     * Finalize with visibility controls. internalOnly=true means non-privileged roles
+     * will only be served the watermarked rendition (or 403 for non-watermarkable files).
+     * maskedRoles is a JSON array string like ["ADMIN","FINANCE"] — roles in the list
+     * are served the ORIGINAL; everyone else is masked.
+     */
+    @Transactional
+    public CampaignAttachment finalizeUpload(String uploadId, String username, String ipAddress,
+                                             boolean internalOnly, String maskedRolesJson) {
         UploadSession session = sessionRepository.findByUploadId(uploadId)
                 .orElseThrow(() -> new StorageException("Unknown uploadId: " + uploadId));
         if (session.getStatus() != AttachmentStatus.IN_PROGRESS) {
@@ -152,8 +168,8 @@ public class ChunkedUploadService {
                 .fileType(mime)
                 .fileSizeBytes(fileSize)
                 .sha256Checksum(sha256)
-                .internalOnly(false)
-                .maskedRoles(null)
+                .internalOnly(internalOnly)
+                .maskedRoles(maskedRolesJson)
                 .version(nextVersion)
                 .uploadedBy(username)
                 .build();

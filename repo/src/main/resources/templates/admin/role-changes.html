@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Role Change Requests</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2>Role Change Requests</h2>
+        <p class="text-muted mb-0">
+            Role changes are HIGH risk and require two distinct admins to approve, separate
+            from the admin who filed the request.
+        </p>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Pending</div>
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(pending)}" class="empty-state">
+                <div class="empty-icon"><i class="bi bi-check2-circle"></i></div>
+                <h3>No pending role changes</h3>
+            </div>
+            <table th:if="${not #lists.isEmpty(pending)}" class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Target User</th>
+                        <th>Old Role</th>
+                        <th>New Role</th>
+                        <th>Requested By</th>
+                        <th>Requested At</th>
+                        <th>Status</th>
+                        <th>First Approver</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${pending}"
+                    th:with="currentUser=${#authentication.name},
+                             isRequester=${#strings.equalsIgnoreCase(r.requestedBy, currentUser)},
+                             isFirstApprover=${r.approver1Username != null and #strings.equalsIgnoreCase(r.approver1Username, currentUser)},
+                             canFirst=${r.status.name() == 'PENDING' and not isRequester},
+                             canSecond=${r.status.name() == 'FIRST_APPROVED' and not isRequester and not isFirstApprover}">
+                    <td><strong th:text="${r.targetUsername}">user</strong></td>
+                    <td><span class="status-badge" th:text="${r.oldRole}">OLD</span></td>
+                    <td><span class="status-badge status-high" th:text="${r.newRole}">NEW</span></td>
+                    <td th:text="${r.requestedBy}">admin</td>
+                    <td th:text="${#temporals.format(r.requestedAt, 'yyyy-MM-dd HH:mm')}">date</td>
+                    <td>
+                        <span class="status-badge"
+                              th:classappend="${r.status.name() == 'FIRST_APPROVED'} ? 'status-pending' : 'status-draft'"
+                              th:text="${r.status}">STATE</span>
+                    </td>
+                    <td>
+                        <span th:if="${r.approver1Username != null}" th:text="${r.approver1Username}">first</span>
+                        <span th:unless="${r.approver1Username != null}" class="text-muted">—</span>
+                    </td>
+                    <td>
+                        <form th:if="${canFirst}"
+                              th:action="@{'/admin/role-changes/' + ${r.id} + '/approve-first'}"
+                              method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-warning">
+                                <i class="bi bi-person-check"></i> First Approval
+                            </button>
+                        </form>
+                        <form th:if="${canSecond}"
+                              th:action="@{'/admin/role-changes/' + ${r.id} + '/approve-second'}"
+                              method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-primary">
+                                <i class="bi bi-check2-all"></i> Second Approval
+                            </button>
+                        </form>
+                        <form th:action="@{'/admin/role-changes/' + ${r.id} + '/reject'}"
+                              method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-lg"></i> Reject
+                            </button>
+                        </form>
+                        <div th:if="${isRequester}" class="small text-muted">
+                            You filed this request — approvals must come from other admins.
+                        </div>
+                        <div th:if="${r.status.name() == 'FIRST_APPROVED' and isFirstApprover}" class="small text-muted">
+                            You recorded the first approval — a different admin must complete it.
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">History</div>
+        <div class="card-body p-0">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>User</th>
+                        <th>Change</th>
+                        <th>Status</th>
+                        <th>Requested By</th>
+                        <th>Approvers</th>
+                        <th>Applied At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <tr th:each="r : ${history}">
+                    <td th:text="${r.id}">1</td>
+                    <td th:text="${r.targetUsername}">user</td>
+                    <td>
+                        <span th:text="${r.oldRole}">OLD</span> &rarr;
+                        <span th:text="${r.newRole}">NEW</span>
+                    </td>
+                    <td><span class="status-badge" th:text="${r.status}">STATE</span></td>
+                    <td th:text="${r.requestedBy}">admin</td>
+                    <td>
+                        <span th:if="${r.approver1Username != null}" th:text="${r.approver1Username}">A</span>
+                        <span th:if="${r.approver2Username != null}">
+                            / <span th:text="${r.approver2Username}">B</span>
+                        </span>
+                    </td>
+                    <td>
+                        <span th:if="${r.appliedAt != null}"
+                              th:text="${#temporals.format(r.appliedAt, 'yyyy-MM-dd HH:mm')}">date</span>
+                        <span th:unless="${r.appliedAt != null}" class="text-muted">—</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

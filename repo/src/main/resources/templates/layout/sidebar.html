@@ -17,6 +17,10 @@
            th:href="@{/campaigns}">
             <i class="bi bi-megaphone"></i> Campaigns
         </a>
+        <a sec:authorize="hasAnyRole('OPERATIONS','REVIEWER','CUSTOMER_SERVICE','ADMIN','FINANCE')"
+           th:href="@{/coupons}">
+            <i class="bi bi-ticket-perforated"></i> Coupons
+        </a>
         <a sec:authorize="hasAnyRole('CUSTOMER_SERVICE','ADMIN')" th:href="@{/cs/lookup}">
             <i class="bi bi-search"></i> Coupon Lookup
         </a>
@@ -40,6 +44,9 @@
         <div class="nav-section" sec:authorize="hasRole('ADMIN')">Administration</div>
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/users}">
             <i class="bi bi-people"></i> Users
+        </a>
+        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/role-changes}">
+            <i class="bi bi-person-gear"></i> Role Changes
         </a>
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/audit-log}">
             <i class="bi bi-shield-lock"></i> Audit Log

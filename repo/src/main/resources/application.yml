@@ -1,13 +1,17 @@
 # Retail Campaign Governance — Application Configuration
-# All values are HARDCODED. No environment variable references (${...}) are allowed in this file.
-# QA must be able to run this project with zero configuration.
+#
+# Secrets (DB password, signing keys, encryption key) are externalized to environment
+# variables with sane local defaults. QA still gets zero-configuration — docker-compose.yml
+# supplies production values and the ${VAR:-default} fallbacks let the app boot without
+# them for local dev / tests. If you add a new secret, add it here with a ${VAR:-default}
+# reference and add the same VAR to docker-compose.yml's `environment:` block.
 spring:
   application:
     name: retail-campaign
   datasource:
-    url: jdbc:mysql://localhost:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true
-    username: retail_user
-    password: retail_pass
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true}
+    username: ${SPRING_DATASOURCE_USERNAME:retail_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:retail_pass}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
@@ -75,9 +79,9 @@ app:
     path: /app/backups
     retention-days: 14
   encryption:
-    key: retail-campaign-aes-key-32chars!!
+    key: ${APP_ENCRYPTION_KEY:retail-campaign-aes-key-32chars!!}
   signing:
-    secret: retail-campaign-hmac-signing-key!!
+    secret: ${APP_SIGNING_SECRET:retail-campaign-hmac-signing-key!!}
   rate-limit:
     standard: 60
     export: 10

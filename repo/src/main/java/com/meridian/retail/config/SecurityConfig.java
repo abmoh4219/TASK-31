@@ -3,6 +3,7 @@ package com.meridian.retail.config;
 import com.meridian.retail.security.CustomAuthenticationFailureHandler;
 import com.meridian.retail.security.CustomAuthenticationSuccessHandler;
 import com.meridian.retail.security.NonceValidationFilter;
+import com.meridian.retail.security.PreAuthLockoutFilter;
 import com.meridian.retail.security.RateLimitFilter;
 import com.meridian.retail.security.RequestSigningFilter;
 import com.meridian.retail.security.UserDetailsServiceImpl;
@@ -49,6 +50,7 @@ public class SecurityConfig {
     private final RateLimitFilter rateLimitFilter;
     private final NonceValidationFilter nonceValidationFilter;
     private final RequestSigningFilter requestSigningFilter;
+    private final PreAuthLockoutFilter preAuthLockoutFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -112,6 +114,10 @@ public class SecurityConfig {
         http.addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(nonceValidationFilter, UsernamePasswordAuthenticationFilter.class);
         http.addFilterBefore(requestSigningFilter, UsernamePasswordAuthenticationFilter.class);
+        // PreAuthLockoutFilter must sit directly in front of auth so a locked/CAPTCHA-
+        // challenged account cannot bypass the brute-force controls by guessing the
+        // password correctly. Placed last so it runs immediately before the auth filter.
+        http.addFilterBefore(preAuthLockoutFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

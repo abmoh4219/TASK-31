@@ -1,5 +1,6 @@
 package com.meridian.retail.service;
 
+import com.meridian.retail.anomaly.ChangeEventService;
 import com.meridian.retail.audit.AuditAction;
 import com.meridian.retail.audit.AuditLogService;
 import com.meridian.retail.dto.CampaignDTO;
@@ -31,6 +32,7 @@ public class CampaignService {
 
     private final CampaignRepository campaignRepository;
     private final AuditLogService auditLogService;
+    private final ChangeEventService changeEventService;
 
     // ---------- Read ----------
 
@@ -146,6 +148,9 @@ public class CampaignService {
         campaignRepository.save(c);
         auditLogService.log(AuditAction.CAMPAIGN_DELETED, "Campaign", c.getId(),
                 before, null, username, ipAddress);
+        // Emit a DELETE change event so AnomalyDetectionService can spot a burst of
+        // deletions (mass-delete rule). Distinct from the audit log, which stores diffs.
+        changeEventService.record("DELETE", "Campaign", c.getId(), username);
     }
 
     // ---------- Validation rules (Task 3.3) ----------

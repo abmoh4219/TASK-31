@@ -93,6 +93,28 @@ public class NonceValidationFilter extends OncePerRequestFilter {
         return uri.startsWith("/admin/") || uri.startsWith("/approval/dual-approve/");
     }
 
+    /**
+     * Browser form submissions under /admin/** are already protected by CSRF + session
+     * auth + role checks. They do not carry X-Nonce / X-Timestamp headers, so applying the
+     * anti-replay filter to them would brick every admin UI action. Skip them here;
+     * programmatic/API callers that send JSON still flow through the full check.
+     */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        if (uri != null && uri.startsWith("/admin/")) {
+            String contentType = request.getContentType();
+            if (contentType != null) {
+                String ct = contentType.toLowerCase();
+                if (ct.startsWith("application/x-www-form-urlencoded")
+                        || ct.startsWith("multipart/form-data")) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private void reject(HttpServletResponse response, String reason) throws IOException {
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         response.setContentType("application/json");
