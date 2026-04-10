@@ -3,20 +3,79 @@
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
-<head><title>Customer Service</title></head>
+<head><title>Customer Service Console</title></head>
 <body>
 <div layout:fragment="content">
     <div class="mb-4">
         <h2>Customer Service Console</h2>
-        <p class="text-muted">Read-only view of campaigns and content for support staff.</p>
+        <p class="text-muted mb-0">Read-only access to campaigns plus a coupon code lookup tool.</p>
     </div>
-    <div class="card">
-        <div class="card-body">
-            <p class="mb-0 text-muted">
-                <i class="bi bi-info-circle"></i>
-                Browse campaigns from the sidebar, or look up coupon codes via the lookup form
-                that appears in Phase 7.
-            </p>
+
+    <div class="row g-3">
+        <!-- Lookup form -->
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">Coupon Lookup</div>
+                <div class="card-body">
+                    <form method="get" th:action="@{/cs/lookup}">
+                        <div class="mb-3">
+                            <label class="form-label">Coupon code</label>
+                            <input type="text" name="code" class="form-control"
+                                   th:value="${query}" placeholder="e.g. SPRING15" autofocus/>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-search"></i> Look up
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result panel -->
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">Result</div>
+                <div class="card-body">
+                    <div th:if="${query == null}" class="text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        Enter a coupon code on the left to look up its campaign.
+                    </div>
+                    <div th:if="${query != null and coupon == null}" class="empty-state" style="padding: 30px 16px;">
+                        <div class="empty-icon"><i class="bi bi-question-circle"></i></div>
+                        <h3>No coupon found</h3>
+                        <p>No coupon matches "<span th:text="${query}">x</span>".</p>
+                    </div>
+                    <div th:if="${coupon != null}">
+                        <div class="mb-3">
+                            <span class="status-badge status-active" th:text="'CODE: ' + ${coupon.code}">CODE</span>
+                            <span class="status-badge status-draft ms-1" th:text="${coupon.discountType}">TYPE</span>
+                        </div>
+                        <table class="table table-borderless mb-0">
+                            <tr><th>Campaign</th><td th:text="${campaign != null ? campaign.name : '—'}">name</td></tr>
+                            <tr><th>Status</th>
+                                <td>
+                                    <span th:if="${campaign != null}" class="status-badge"
+                                          th:classappend="'status-' + ${#strings.toLowerCase(#strings.replace(campaign.status, '_', '-'))}"
+                                          th:text="${campaign.status}">STATUS</span>
+                                </td></tr>
+                            <tr><th>Discount</th>
+                                <td>
+                                    <span th:if="${coupon.discountType.name() == 'PERCENT'}"
+                                          th:text="${coupon.discountValue} + '%'">15%</span>
+                                    <span th:if="${coupon.discountType.name() == 'FIXED'}"
+                                          th:text="'$' + ${coupon.discountValue}">$20</span>
+                                </td></tr>
+                            <tr><th>Min purchase</th><td th:text="'$' + ${coupon.minPurchaseAmount}">$0</td></tr>
+                            <tr><th>Valid</th>
+                                <td><small th:text="${coupon.validFrom} + ' → ' + ${coupon.validUntil}">dates</small></td></tr>
+                            <tr><th>Uses</th>
+                                <td><span th:text="${coupon.usesCount} + ' / ' + ${coupon.maxUses}">N/M</span></td></tr>
+                            <tr><th>Stackable</th>
+                                <td><span th:text="${coupon.stackable ? 'Yes' : 'No'}">No</span></td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

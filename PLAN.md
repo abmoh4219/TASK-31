@@ -200,22 +200,22 @@
 > QA manually navigates every page — it must look and feel like a real product.
 > Complete all tasks continuously, then pause. Wait for "proceed".
 
-- [ ] 7.1 Create UserService.java: createUser(request) — validates password complexity, BCrypt hash, save, auditLog; updateUser(id, request) — before/after snapshot, update, auditLog; deactivateUser(id) — sets is_active=false, invalidates sessions; changeRole(userId, newRole) — auditLog(ROLE_CHANGED, before, after) — requires ADMIN
-- [ ] 7.2 Create AdminController.java (full): GET /admin/dashboard, GET /admin/users (list), GET /admin/users/new (form), POST /admin/users (create), GET /admin/users/{id}/edit, PUT /admin/users/{id} (update), POST /admin/users/{id}/deactivate, GET /admin/users/check-username (HTMX unique check), POST /admin/backup/run, GET /admin/backup/history
-- [ ] 7.3 Create templates/admin/dashboard.html: 6 KPI cards (total users, active campaigns, pending approvals, unacknowledged alerts, last backup status, pending content imports). Quick links to all admin functions. Alert banner if unacknowledged HIGH/CRITICAL anomaly alerts.
-- [ ] 7.4 Create templates/dashboard/ops.html: My Campaigns table (with status badges + edit buttons), quick "Create Campaign" primary button, "Pending Review" count badge in header.
-- [ ] 7.5 Create templates/dashboard/reviewer.html: approval queue count as large badge, list of high-risk pending items, recent approvals history table.
-- [ ] 7.6 Create templates/dashboard/finance.html: analytics summary cards, recent export log, Export to CSV button prominent.
-- [ ] 7.7 Create templates/dashboard/cs.html: read-only campaign list (no create/edit buttons), coupon code lookup form (enter code → see campaign details and validity).
-- [ ] 7.8 Create templates/admin/users.html: full user management table (username, role badge, status badge, last login, actions). Create User button top right. Deactivate button (confirm modal). Role change inline select with "Save Role" button.
-- [ ] 7.9 Create templates/admin/users-form.html: create/edit user form. Password field with JavaScript strength indicator (weak/medium/strong colored bar). HTMX check for username uniqueness on blur (calls /admin/users/check-username). Role select with role descriptions shown below.
-- [ ] 7.10 Create templates/admin/backup.html: backup history table (filename, size, date, status, restore notes), "Run Backup Now" button (POST /admin/backup/run), recovery procedure section clearly documented.
-- [ ] 7.11 Final pass — verify ALL templates use th:layout:decorate="~{layout/base}" and correctly extend base layout with no missing fragments
-- [ ] 7.12 Final pass — verify ALL action buttons that are role-restricted have th:disabled="${!#authorization.expression('hasRole(...)')}" AND th:title="'[Role] permission required'" for "why blocked" message
-- [ ] 7.13 Final pass — verify ALL pages have empty state handling: th:if="${#lists.isEmpty(items)}" shows empty state card with icon + message + primary action button
-- [ ] 7.14 Final pass — verify ALL forms have success flash message handling: if model has "successMessage" attribute → Bootstrap 5 alert div visible
-- [ ] 7.15 Add HTMX validation endpoints to CampaignController: GET /campaigns/validate/dates?startDate=&endDate= → returns fragment with validation message div; GET /campaigns/validate/discount?type=&value= → returns fragment; GET /campaigns/validate/code?code= → returns fragment showing available/taken
-- [ ] 7.16 Verify visual consistency: all pages use same card style, same button classes, same badge styles, same spacing. No pages with raw unstyled HTML.
+- [x] 7.1 Create UserService.java: createUser(request) — validates password complexity, BCrypt hash, save, auditLog; updateUser(id, request) — before/after snapshot, update, auditLog; deactivateUser(id) — sets is_active=false, invalidates sessions; changeRole(userId, newRole) — auditLog(ROLE_CHANGED, before, after) — requires ADMIN
+- [x] 7.2 Create AdminController.java (full): GET /admin/dashboard, GET /admin/users (list), GET /admin/users/new (form), POST /admin/users (create), GET /admin/users/{id}/edit, PUT /admin/users/{id} (update), POST /admin/users/{id}/deactivate, GET /admin/users/check-username (HTMX unique check), POST /admin/backup/run, GET /admin/backup/history
+- [x] 7.3 Create templates/admin/dashboard.html: 6 KPI cards (total users, active campaigns, pending approvals, unacknowledged alerts, last backup status, pending content imports). Quick links to all admin functions. Alert banner if unacknowledged HIGH/CRITICAL anomaly alerts.
+- [x] 7.4 Create templates/dashboard/ops.html: My Campaigns table (with status badges + edit buttons), quick "Create Campaign" primary button, "Pending Review" count badge in header.
+- [x] 7.5 Create templates/dashboard/reviewer.html: approval queue count as large badge, list of high-risk pending items, recent approvals history table.
+- [x] 7.6 Create templates/dashboard/finance.html: analytics summary cards, recent export log, Export to CSV button prominent.
+- [x] 7.7 Create templates/dashboard/cs.html: read-only campaign list (no create/edit buttons), coupon code lookup form (enter code → see campaign details and validity).
+- [x] 7.8 Create templates/admin/users.html: full user management table (username, role badge, status badge, last login, actions). Create User button top right. Deactivate button (confirm modal). Role change inline select with "Save Role" button.
+- [x] 7.9 Create templates/admin/users-form.html: create/edit user form. Password field with JavaScript strength indicator (weak/medium/strong colored bar). HTMX check for username uniqueness on blur (calls /admin/users/check-username). Role select with role descriptions shown below.
+- [x] 7.10 Create templates/admin/backup.html: backup history table (filename, size, date, status, restore notes), "Run Backup Now" button (POST /admin/backup/run), recovery procedure section clearly documented.
+- [x] 7.11 Final pass — verify ALL templates use th:layout:decorate="~{layout/base}" and correctly extend base layout with no missing fragments
+- [x] 7.12 Final pass — verify ALL action buttons that are role-restricted have th:disabled="${!#authorization.expression('hasRole(...)')}" AND th:title="'[Role] permission required'" for "why blocked" message
+- [x] 7.13 Final pass — verify ALL pages have empty state handling: th:if="${#lists.isEmpty(items)}" shows empty state card with icon + message + primary action button
+- [x] 7.14 Final pass — verify ALL forms have success flash message handling: if model has "successMessage" attribute → Bootstrap 5 alert div visible
+- [x] 7.15 Add HTMX validation endpoints to CampaignController: GET /campaigns/validate/dates?startDate=&endDate= → returns fragment with validation message div; GET /campaigns/validate/discount?type=&value= → returns fragment; GET /campaigns/validate/code?code= → returns fragment showing available/taken
+- [x] 7.16 Verify visual consistency: all pages use same card style, same button classes, same badge styles, same spacing. No pages with raw unstyled HTML.
 
 **Phase 7 checkpoint: All 5 roles can navigate their full dashboard without broken pages. Every page has empty state. All disabled actions show "why blocked".**
 

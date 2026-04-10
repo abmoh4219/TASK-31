@@ -54,6 +54,31 @@
         </div>
     </div>
 
+    <!-- Secondary KPI row -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Draft Campaigns</div>
+                <div class="kpi-value" th:text="${draftCampaigns}">0</div>
+                <div class="kpi-trend"><i class="bi bi-pencil"></i> in progress</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Content Items</div>
+                <div class="kpi-value" th:text="${contentItemCount}">0</div>
+                <div class="kpi-trend"><i class="bi bi-files"></i> imported total</div>
+            </div>
+        </div>
+    </div>
+
+    <div th:if="${unacknowledgedAlerts > 0}" class="alert alert-warning mb-3">
+        <i class="bi bi-exclamation-triangle"></i>
+        <strong>Action required:</strong>
+        <span th:text="${unacknowledgedAlerts}">0</span> unacknowledged anomaly alert(s).
+        <a th:href="@{/admin/anomaly-alerts}" class="alert-link">Review now</a>
+    </div>
+
     <div class="row g-3">
         <div class="col-md-8">
             <div class="card">

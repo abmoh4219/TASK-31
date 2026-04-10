@@ -201,6 +201,19 @@ public class CampaignController {
         }
     }
 
+    /** HTMX endpoint that returns "available" or "taken" for a coupon code. */
+    @GetMapping(value = "/validate/code", produces = "text/html")
+    @ResponseBody
+    public String validateCode(@RequestParam(required = false) String code) {
+        if (code == null || code.isBlank()) {
+            return "<span class='form-text'>Pick a coupon code.</span>";
+        }
+        if (couponRepository.existsByCodeIgnoreCase(code)) {
+            return "<span class='field-validation-error'><i class='bi bi-x-circle'></i> Already taken</span>";
+        }
+        return "<span class='field-validation-success'><i class='bi bi-check-circle'></i> Available</span>";
+    }
+
     @GetMapping(value = "/validate/discount", produces = "text/html")
     @ResponseBody
     public String validateDiscount(@RequestParam DiscountType type,

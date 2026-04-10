@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>User Form</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2 th:text="${isNew} ? 'Create User' : 'Edit User'">User</h2>
+        <p class="text-muted mb-0">All fields are required. Passwords must meet complexity rules.</p>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}">err</div>
+
+    <div class="card" style="max-width: 720px;">
+        <div class="card-body">
+            <form th:action="${isNew} ? @{/admin/users} : @{'/admin/users/' + ${editUser.id} + '/update'}"
+                  method="post" autocomplete="off">
+
+                <div class="mb-3" th:if="${isNew}">
+                    <label class="form-label">Username</label>
+                    <input type="text" name="username" class="form-control" required
+                           hx-get="/admin/users/check-username"
+                           hx-trigger="keyup changed delay:400ms"
+                           hx-target="#username-feedback"/>
+                    <div id="username-feedback" class="form-text">Pick a username.</div>
+                </div>
+                <div class="mb-3" th:if="${not isNew}">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" disabled th:value="${editUser.username}"/>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Full name</label>
+                    <input type="text" name="fullName" class="form-control"
+                           th:value="${not isNew ? editUser.fullName : ''}"/>
+                </div>
+
+                <div class="mb-3" th:if="${isNew}">
+                    <label class="form-label">Password</label>
+                    <input type="password" name="password" id="password" class="form-control" required
+                           oninput="updateStrength(this.value);"/>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div id="strength-bar" class="progress-bar" style="width: 0%;"></div>
+                    </div>
+                    <div class="form-text">
+                        At least 12 characters, with uppercase, lowercase, digit and special character.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Role</label>
+                    <select name="role" class="form-select" required>
+                        <option value="">Select role…</option>
+                        <option th:each="r : ${roles}"
+                                th:value="${r}"
+                                th:text="${r}"
+                                th:selected="${not isNew and editUser.role == r}">ROLE</option>
+                    </select>
+                    <div class="form-text">
+                        ADMIN: full access; OPERATIONS: create campaigns; REVIEWER: approval queue;
+                        FINANCE: analytics export; CUSTOMER_SERVICE: read-only.
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Save
+                    </button>
+                    <a th:href="@{/admin/users}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<th:block layout:fragment="scripts">
+    <script>
+        function updateStrength(pwd) {
+            let score = 0;
+            if (pwd.length >= 12) score += 25;
+            if (/[A-Z]/.test(pwd)) score += 20;
+            if (/[a-z]/.test(pwd)) score += 20;
+            if (/[0-9]/.test(pwd)) score += 15;
+            if (/[^A-Za-z0-9]/.test(pwd)) score += 20;
+            const bar = document.getElementById('strength-bar');
+            bar.style.width = score + '%';
+            bar.className = 'progress-bar ' +
+                (score < 50 ? 'bg-danger' : score < 80 ? 'bg-warning' : 'bg-success');
+        }
+    </script>
+</th:block>
+</body>
+</html>

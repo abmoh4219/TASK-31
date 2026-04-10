@@ -17,6 +17,9 @@
            th:href="@{/campaigns}">
             <i class="bi bi-megaphone"></i> Campaigns
         </a>
+        <a sec:authorize="hasAnyRole('CUSTOMER_SERVICE','ADMIN')" th:href="@{/cs/lookup}">
+            <i class="bi bi-search"></i> Coupon Lookup
+        </a>
         <a sec:authorize="hasAnyRole('OPERATIONS','ADMIN')" th:href="@{/upload}">
             <i class="bi bi-cloud-upload"></i> Upload Files
         </a>
