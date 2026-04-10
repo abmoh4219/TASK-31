@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Analytics</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2>Analytics Dashboard</h2>
+            <p class="text-muted mb-0">Coupon issuance, redemption and discount utilization.</p>
+        </div>
+        <div sec:authorize="hasAnyRole('FINANCE','ADMIN')">
+            <a th:href="@{/analytics/export}" class="btn btn-primary">
+                <i class="bi bi-download"></i> Export to CSV
+            </a>
+        </div>
+        <div sec:authorize="!hasAnyRole('FINANCE','ADMIN')">
+            <button class="btn btn-primary" disabled
+                    title="Finance or Admin role required to export analytics">
+                <i class="bi bi-download"></i> Export to CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Coupons Issued</div>
+                <div class="kpi-value" th:text="${couponStats.issuanceCount}">0</div>
+                <div class="kpi-trend"><i class="bi bi-ticket-perforated"></i> max-uses sum</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Total Redemptions</div>
+                <div class="kpi-value" th:text="${totalRedemptions}">0</div>
+                <div class="kpi-trend"><i class="bi bi-bag-check"></i> all stores, all time</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Discount Given</div>
+                <div class="kpi-value" th:text="'$' + ${discountStats.totalDiscountGiven}">$0</div>
+                <div class="kpi-trend"><i class="bi bi-cash-coin"></i> sum of applied</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Active Campaigns</div>
+                <div class="kpi-value" th:text="${activeCampaigns}">0</div>
+                <div class="kpi-trend"><i class="bi bi-megaphone"></i> in-flight</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form method="get" th:action="@{/analytics/dashboard}" class="row g-2 align-items-end m-0">
+                <div class="col-md-3">
+                    <label class="form-label">From</label>
+                    <input type="date" name="from" class="form-control" th:value="${fromDate}"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To</label>
+                    <input type="date" name="to" class="form-control" th:value="${toDate}"/>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Store</label>
+                    <input type="text" name="storeId" class="form-control" th:value="${storeId}" placeholder="e.g. STORE-001"/>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-primary">Apply Filters</button>
+                    <a th:href="@{/analytics/dashboard}" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Top campaigns table + chart -->
+    <div class="row g-3">
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">Top Coupons by Redemptions</div>
+                <div class="card-body">
+                    <div th:if="${#lists.isEmpty(topCampaigns)}" class="empty-state">
+                        <div class="empty-icon"><i class="bi bi-bar-chart"></i></div>
+                        <h3>No redemptions in range</h3>
+                        <p>Try widening the date filter or removing the store filter.</p>
+                    </div>
+                    <canvas id="topCampaignsChart" th:if="${not #lists.isEmpty(topCampaigns)}" height="240"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">Detail</div>
+                <div class="card-body p-0">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th class="text-end">Redemptions</th>
+                                <th class="text-end">Total $</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="t : ${topCampaigns}">
+                                <td th:text="${t.code}">CODE</td>
+                                <td class="text-end" th:text="${t.redemptions}">0</td>
+                                <td class="text-end" th:text="'$' + ${t.totalDiscount}">$0</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(topCampaigns)}">
+                                <td colspan="3" class="text-muted text-center">No data</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="scripts">
+    <script th:src="@{/vendor/chartjs/chart.umd.min.js}"></script>
+    <script th:if="${not #lists.isEmpty(topCampaigns)}" th:inline="javascript">
+        const labels = /*[[${topCampaigns.![code]}]]*/ [];
+        const counts = /*[[${topCampaigns.![redemptions]}]]*/ [];
+        const ctx = document.getElementById('topCampaignsChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Redemptions',
+                    data: counts,
+                    backgroundColor: '#3b82f6'
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    </script>
+</th:block>
+</body>
+</html>

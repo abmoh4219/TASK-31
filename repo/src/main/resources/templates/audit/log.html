@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Audit Log</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2>Audit Log <span class="status-badge status-high">ADMIN ONLY</span></h2>
+        <p class="text-muted mb-0">Immutable record of every critical operation. Click a row to expand.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div th:if="${entries.isEmpty()}" class="empty-state">
+                <div class="empty-icon"><i class="bi bi-shield-lock"></i></div>
+                <h3>No audit entries</h3>
+                <p>The system hasn't logged any auditable actions yet.</p>
+            </div>
+            <table th:if="${not entries.isEmpty()}" class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Operator</th>
+                        <th>Action</th>
+                        <th>Entity</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <th:block th:each="e : ${entries.content}">
+                        <tr data-bs-toggle="collapse" th:attr="data-bs-target='#diff-' + ${e.id}" style="cursor:pointer;">
+                            <td><small th:text="${#temporals.format(e.createdAt, 'yyyy-MM-dd HH:mm:ss')}">date</small></td>
+                            <td th:text="${e.operatorUsername}">user</td>
+                            <td><span class="status-badge status-active" th:text="${e.action}">ACTION</span></td>
+                            <td>
+                                <span th:text="${e.entityType}">type</span>
+                                <small class="text-muted" th:text="${e.entityId != null ? '#' + e.entityId : ''}">id</small>
+                            </td>
+                            <td><small class="text-muted" th:text="${e.ipAddress}">ip</small></td>
+                        </tr>
+                        <tr th:id="'diff-' + ${e.id}" class="collapse">
+                            <td colspan="5" style="background:#f8fafc;">
+                                <strong>Before</strong>
+                                <pre style="background:#fff; padding:10px; border-radius:6px; font-size:11px; max-height:200px; overflow:auto;"
+                                     th:text="${e.beforeState != null ? e.beforeState : '(none)'}">{}</pre>
+                                <strong>After</strong>
+                                <pre style="background:#fff; padding:10px; border-radius:6px; font-size:11px; max-height:200px; overflow:auto;"
+                                     th:text="${e.afterState != null ? e.afterState : '(none)'}">{}</pre>
+                            </td>
+                        </tr>
+                    </th:block>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <nav th:if="${entries.totalPages > 1}" class="mt-3">
+        <ul class="pagination">
+            <li class="page-item" th:classappend="${entries.first} ? 'disabled'">
+                <a class="page-link" th:href="@{/admin/audit-log(page=${entries.number - 1})}">Previous</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link" th:text="'Page ' + (${entries.number} + 1) + ' of ' + ${entries.totalPages}">page</span>
+            </li>
+            <li class="page-item" th:classappend="${entries.last} ? 'disabled'">
+                <a class="page-link" th:href="@{/admin/audit-log(page=${entries.number + 1})}">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+</body>
+</html>

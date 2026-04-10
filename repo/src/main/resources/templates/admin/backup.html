@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Backups</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2>Backups</h2>
+            <p class="text-muted mb-0">Nightly local backups (mysqldump + gzip), 14-day retention.</p>
+        </div>
+        <form th:action="@{/admin/backup/run}" method="post">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-play-fill"></i> Run Backup Now
+            </button>
+        </form>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">Recovery Procedure</div>
+        <div class="card-body">
+            <ol class="mb-0">
+                <li><code>docker compose down</code></li>
+                <li>Locate the most recent <code>.sql.gz</code> in <code>/app/backups/</code> (or the <code>backup-data</code> volume)</li>
+                <li><code>docker compose up mysql</code></li>
+                <li><code>gunzip &lt; backup.sql.gz | docker exec -i mysql mysql -uretail_user -pretail_pass retail_campaign</code></li>
+                <li><code>docker compose up app</code></li>
+            </ol>
+            <p class="text-muted mt-2 mb-0">Estimated RTO: under 4 hours on a single on-prem server.</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(backups)}" class="empty-state">
+                <div class="empty-icon"><i class="bi bi-hdd"></i></div>
+                <h3>No backups yet</h3>
+                <p>The nightly job runs at 02:00 server time. Use the button above to trigger one now.</p>
+            </div>
+            <table th:if="${not #lists.isEmpty(backups)}" class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Filename</th>
+                        <th>Created</th>
+                        <th>Size</th>
+                        <th>Status</th>
+                        <th>Checksum</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="b : ${backups}">
+                        <td><code th:text="${b.filename}">file</code></td>
+                        <td><small th:text="${#temporals.format(b.createdAt, 'yyyy-MM-dd HH:mm')}">date</small></td>
+                        <td th:text="${b.fileSizeBytes} + ' B'">size</td>
+                        <td>
+                            <span class="status-badge"
+                                  th:classappend="${b.status.name() == 'COMPLETE' ? 'status-active' :
+                                                   b.status.name() == 'FAILED' ? 'status-rejected' : 'status-draft'}"
+                                  th:text="${b.status}">STATUS</span>
+                        </td>
+                        <td><code style="font-size:11px;"
+                                  th:text="${b.sha256Checksum != null ? #strings.substring(b.sha256Checksum, 0, 12) + '…' : ''}">hash</code></td>
+                        <td><small class="text-muted" th:text="${b.notes}">notes</small></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Sensitive Access Log</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2>Sensitive Field Access <span class="status-badge status-high">ADMIN ONLY</span></h2>
+        <p class="text-muted mb-0">Records every read of sensitive fields like employee notes.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div th:if="${entries.isEmpty()}" class="empty-state">
+                <div class="empty-icon"><i class="bi bi-eye-slash"></i></div>
+                <h3>No sensitive accesses recorded</h3>
+                <p>Nothing to review.</p>
+            </div>
+            <table th:if="${not entries.isEmpty()}" class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Accessor</th>
+                        <th>Field</th>
+                        <th>Entity</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="e : ${entries.content}">
+                        <td><small th:text="${#temporals.format(e.accessedAt, 'yyyy-MM-dd HH:mm:ss')}">date</small></td>
+                        <td th:text="${e.accessorUsername}">user</td>
+                        <td th:text="${e.fieldName}">field</td>
+                        <td>
+                            <span th:text="${e.entityType}">type</span>
+                            <small class="text-muted" th:text="${e.entityId != null ? '#' + e.entityId : ''}">id</small>
+                        </td>
+                        <td><small class="text-muted" th:text="${e.ipAddress}">ip</small></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

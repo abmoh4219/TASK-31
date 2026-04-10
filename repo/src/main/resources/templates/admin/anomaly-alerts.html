@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Anomaly Alerts</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2>Anomaly Alerts</h2>
+        <p class="text-muted mb-0">Mass deletions and repeated exports trigger alerts here.</p>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(alerts)}" class="empty-state">
+                <div class="empty-icon"><i class="bi bi-bell-slash"></i></div>
+                <h3>No alerts</h3>
+                <p>Nothing anomalous detected. The scheduler runs every 60 seconds.</p>
+            </div>
+            <table th:if="${not #lists.isEmpty(alerts)}" class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Severity</th>
+                        <th>Type</th>
+                        <th>Description</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${alerts}"
+                        th:style="${a.acknowledgedAt == null ? 'background:#fffbeb;' : ''}">
+                        <td><small th:text="${#temporals.format(a.detectedAt, 'yyyy-MM-dd HH:mm')}">date</small></td>
+                        <td>
+                            <span class="status-badge"
+                                  th:classappend="'status-' + ${#strings.toLowerCase(a.severity)}"
+                                  th:text="${a.severity}">SEVERITY</span>
+                        </td>
+                        <td><strong th:text="${a.alertType}">TYPE</strong></td>
+                        <td th:text="${a.description}">desc</td>
+                        <td>
+                            <span th:if="${a.acknowledgedAt != null}" class="status-badge status-active">
+                                ACK by <span th:text="${a.acknowledgedBy}">user</span>
+                            </span>
+                            <span th:if="${a.acknowledgedAt == null}" class="status-badge status-pending">PENDING</span>
+                        </td>
+                        <td>
+                            <form th:if="${a.acknowledgedAt == null}"
+                                  th:action="@{'/admin/anomaly-alerts/' + ${a.id} + '/ack'}" method="post">
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-check2"></i> Ack
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>
