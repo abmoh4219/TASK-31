@@ -30,13 +30,6 @@ public class StubController {
         return "dashboard/finance";
     }
 
-    @GetMapping("/content")
-    @PreAuthorize("hasAnyRole('OPERATIONS','REVIEWER','ADMIN')")
-    public String contentLanding(Model model) {
-        model.addAttribute("breadcrumb", "Content Integrity");
-        return "dashboard/cs"; // replaced in Phase 5
-    }
-
     @GetMapping("/upload")
     @PreAuthorize("hasAnyRole('OPERATIONS','ADMIN')")
     public String uploadLanding() {

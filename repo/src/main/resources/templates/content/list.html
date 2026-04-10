@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Content Integrity</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2>Content Integrity</h2>
+            <p class="text-muted mb-0">Imported marketing content with duplicate detection.</p>
+        </div>
+        <div>
+            <a th:href="@{/content/duplicates}" class="btn btn-outline-primary">
+                <i class="bi bi-files"></i> View Duplicate Groups
+            </a>
+            <button type="button" class="btn btn-primary"
+                    data-bs-toggle="modal" data-bs-target="#importModal">
+                <i class="bi bi-cloud-upload"></i> Import
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(items)}" class="empty-state">
+                <div class="empty-icon"><i class="bi bi-files"></i></div>
+                <h3>No content imported yet</h3>
+                <p>Use the Import button to add content from a CSV file or enter it manually.</p>
+            </div>
+            <table th:if="${not #lists.isEmpty(items)}" class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Source URL</th>
+                        <th>Status</th>
+                        <th>Imported by</th>
+                        <th>Fingerprint</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="i : ${items}">
+                        <td><strong th:text="${i.title}">title</strong></td>
+                        <td><small class="text-muted" th:text="${i.normalizedUrl}">url</small></td>
+                        <td>
+                            <span class="status-badge"
+                                  th:classappend="'status-' + ${#strings.toLowerCase(i.status)}"
+                                  th:text="${i.status}">STATUS</span>
+                        </td>
+                        <td th:text="${i.importedBy}">user</td>
+                        <td>
+                            <code style="font-size: 11px;"
+                                  th:text="${i.sha256Fingerprint != null ? #strings.substring(i.sha256Fingerprint, 0, 12) + '…' : ''}">hash</code>
+                        </td>
+                        <td>
+                            <a th:href="@{'/content/' + ${i.id} + '/history'}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-clock-history"></i> History
+                            </a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Import modal -->
+    <div class="modal fade" id="importModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Import content</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#csv-tab">From CSV</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#manual-tab">Add manually</a>
+                        </li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane active" id="csv-tab">
+                            <form th:action="@{/content/import/csv}" method="post" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label class="form-label">Target campaign</label>
+                                    <select name="campaignId" class="form-select" required>
+                                        <option value="">Select…</option>
+                                        <option th:each="c : ${campaigns}" th:value="${c.id}" th:text="${c.name}">name</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">CSV file</label>
+                                    <input type="file" name="file" class="form-control" accept=".csv,text/csv" required/>
+                                    <div class="form-text">Header row required: <code>title,source_url,body_text</code></div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Import</button>
+                            </form>
+                        </div>
+                        <div class="tab-pane" id="manual-tab">
+                            <form th:action="@{/content/import/single}" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label">Target campaign</label>
+                                    <select name="campaignId" class="form-select" required>
+                                        <option value="">Select…</option>
+                                        <option th:each="c : ${campaigns}" th:value="${c.id}" th:text="${c.name}">name</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Title</label>
+                                    <input type="text" name="title" class="form-control" required/>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Source URL</label>
+                                    <input type="url" name="sourceUrl" class="form-control" required/>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Body</label>
+                                    <textarea name="body" rows="5" class="form-control" required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Add</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

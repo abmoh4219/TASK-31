@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Duplicate Groups</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2>Duplicate Groups</h2>
+        <p class="text-muted mb-0">Items detected as exact or near-duplicates. Merge to consolidate to a master record.</p>
+    </div>
+
+    <div th:if="${#lists.isEmpty(groups)}" class="empty-state">
+        <div class="empty-icon"><i class="bi bi-check2-circle"></i></div>
+        <h3>No duplicates found</h3>
+        <p>All imported content is unique.</p>
+        <a th:href="@{/content}" class="btn btn-primary">Back to content</a>
+    </div>
+
+    <div class="row g-3" th:if="${not #lists.isEmpty(groups)}">
+        <div class="col-md-6" th:each="g : ${groups}">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between">
+                    <strong>Group: master #<span th:text="${g.master.id}">id</span></strong>
+                    <span class="status-badge status-active" th:text="${g.duplicates.size()} + ' duplicate(s)'">N</span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3" style="border-left: 3px solid var(--primary); padding-left: 12px;">
+                        <strong th:text="${g.master.title}">master title</strong>
+                        <div class="text-muted small" th:text="${g.master.normalizedUrl}">url</div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Duplicates:</strong>
+                        <ul class="list-unstyled mt-2">
+                            <li th:each="d : ${g.duplicates}" class="mb-2">
+                                <div th:text="${d.item.title}">dup title</div>
+                                <div class="text-muted small" th:text="${d.item.normalizedUrl}">dup url</div>
+                                <span class="status-badge"
+                                      th:classappend="${d.exact} ? 'status-active' : 'status-medium'"
+                                      th:text="${d.exact} ? 'Exact match' : ('Near match — ' + d.hammingDistance + ' bits differ')">match</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <form th:action="@{/content/merge}" method="post" sec:authorize="hasAnyRole('REVIEWER','ADMIN')">
+                        <input type="hidden" name="masterId" th:value="${g.master.id}"/>
+                        <input type="hidden" name="duplicateIds"
+                               th:value="${#strings.listJoin(g.duplicates.![item.id], ',')}"/>
+                        <button type="submit" class="btn btn-sm btn-primary">
+                            <i class="bi bi-arrow-down-up"></i> Merge all into master
+                        </button>
+                    </form>
+                    <button class="btn btn-sm btn-outline-secondary" disabled
+                            sec:authorize="!hasAnyRole('REVIEWER','ADMIN')"
+                            title="Reviewer or Admin role required">
+                        <i class="bi bi-arrow-down-up"></i> Merge all into master
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

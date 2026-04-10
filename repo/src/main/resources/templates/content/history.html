@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Version History</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2>Version History</h2>
+        <p class="text-muted mb-0">
+            Snapshots of <strong th:text="${item.title}">title</strong>
+        </p>
+    </div>
+
+    <div th:if="${#lists.isEmpty(versions)}" class="empty-state">
+        <div class="empty-icon"><i class="bi bi-clock-history"></i></div>
+        <h3>No history yet</h3>
+        <p>This item has not been modified since import.</p>
+        <a th:href="@{/content}" class="btn btn-primary">Back to content</a>
+    </div>
+
+    <div class="card" th:if="${not #lists.isEmpty(versions)}">
+        <div class="card-body">
+            <div class="mb-3" th:each="v : ${versions}" style="border-left: 3px solid var(--primary); padding-left: 16px;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="status-badge status-active">v<span th:text="${v.versionNum}">N</span></span>
+                        <strong class="ms-2" th:text="${v.changedBy}">user</strong>
+                        <small class="text-muted ms-2"
+                               th:text="${#temporals.format(v.changedAt, 'yyyy-MM-dd HH:mm')}">date</small>
+                    </div>
+                    <form th:action="@{'/content/' + ${item.id} + '/rollback/' + ${v.versionNum}}" method="post"
+                          sec:authorize="hasAnyRole('REVIEWER','ADMIN')">
+                        <button type="submit" class="btn btn-sm btn-outline-warning"
+                                onclick="return confirm('Roll back to version ' + this.form.elements.length + '?');">
+                            <i class="bi bi-arrow-counterclockwise"></i> Rollback
+                        </button>
+                    </form>
+                </div>
+                <details class="mt-2">
+                    <summary class="text-muted" style="font-size:13px; cursor:pointer;">Show snapshot</summary>
+                    <pre style="background:#f8fafc; padding:12px; border-radius:6px; font-size:11px; max-height:240px; overflow:auto;"
+                         th:text="${v.snapshotJson}">{}</pre>
+                </details>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
