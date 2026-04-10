@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Campaigns</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 style="margin-bottom:4px;">Campaigns</h2>
+            <p class="text-muted mb-0">Coupons and limited-time discounts across all stores.</p>
+        </div>
+        <div sec:authorize="hasAnyRole('OPERATIONS','ADMIN')">
+            <a th:href="@{/campaigns/new}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> New Campaign
+            </a>
+        </div>
+        <div sec:authorize="!hasAnyRole('OPERATIONS','ADMIN')">
+            <button class="btn btn-primary" disabled
+                    title="Operations role required to create campaigns">
+                <i class="bi bi-plus-lg"></i> New Campaign
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <form th:action="@{/campaigns}" method="get" class="row g-2 align-items-end m-0">
+                <div class="col-md-3">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">All</option>
+                        <option th:each="s : ${statuses}"
+                                th:value="${s}"
+                                th:text="${s}"
+                                th:selected="${statusFilter != null and statusFilter == s}">STATUS</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Type</label>
+                    <select name="type" class="form-select">
+                        <option value="">All</option>
+                        <option th:each="t : ${types}"
+                                th:value="${t}"
+                                th:text="${t}"
+                                th:selected="${typeFilter != null and typeFilter == t}">TYPE</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-outline-primary">Filter</button>
+                    <a th:href="@{/campaigns}" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${#lists.isEmpty(campaigns)}" class="empty-state">
+        <div class="empty-icon"><i class="bi bi-megaphone"></i></div>
+        <h3>No campaigns match your filters</h3>
+        <p>Try adjusting the filters above, or create a new campaign.</p>
+        <a sec:authorize="hasAnyRole('OPERATIONS','ADMIN')"
+           th:href="@{/campaigns/new}" class="btn btn-primary">Create campaign</a>
+    </div>
+
+    <!-- Table -->
+    <div th:if="${not #lists.isEmpty(campaigns)}" class="card">
+        <div class="card-body p-0">
+            <table class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Risk</th>
+                        <th>Store</th>
+                        <th>Period</th>
+                        <th>Created by</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${campaigns}">
+                        <td><strong th:text="${c.name}">name</strong></td>
+                        <td><span class="status-badge status-draft" th:text="${c.type}">TYPE</span></td>
+                        <td>
+                            <span class="status-badge"
+                                  th:classappend="'status-' + ${#strings.toLowerCase(#strings.replace(c.status, '_', '-'))}"
+                                  th:text="${c.status}">STATUS</span>
+                        </td>
+                        <td>
+                            <span class="status-badge"
+                                  th:classappend="'status-' + ${#strings.toLowerCase(c.riskLevel)}"
+                                  th:text="${c.riskLevel}">RISK</span>
+                        </td>
+                        <td th:text="${c.storeId}">STORE</td>
+                        <td>
+                            <small class="text-muted"
+                                   th:text="${c.startDate} + ' → ' + ${c.endDate}">dates</small>
+                        </td>
+                        <td th:text="${c.createdBy}">user</td>
+                        <td class="text-end">
+                            <div sec:authorize="hasAnyRole('OPERATIONS','ADMIN')">
+                                <a th:href="@{'/campaigns/' + ${c.id} + '/edit'}"
+                                   class="btn btn-sm btn-outline-primary"
+                                   th:if="${c.status.name() == 'DRAFT'}">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
+                                <form th:action="@{'/campaigns/' + ${c.id} + '/submit'}" method="post" class="d-inline"
+                                      th:if="${c.status.name() == 'DRAFT'}">
+                                    <button class="btn btn-sm btn-primary">
+                                        <i class="bi bi-arrow-up-right-circle"></i> Submit
+                                    </button>
+                                </form>
+                            </div>
+                            <div sec:authorize="!hasAnyRole('OPERATIONS','ADMIN','REVIEWER')">
+                                <button class="btn btn-sm btn-outline-secondary" disabled
+                                        title="Operations role required">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

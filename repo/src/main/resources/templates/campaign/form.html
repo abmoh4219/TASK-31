@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Campaign Form</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2 th:text="${isNew} ? 'New Campaign' : 'Edit Campaign'">New Campaign</h2>
+        <p class="text-muted mb-0">Guided form with real-time validation. Receipt preview updates as you type.</p>
+    </div>
+
+    <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}">err</div>
+
+    <form th:action="${isNew} ? @{/campaigns} : @{'/campaigns/' + ${campaignId}}"
+          method="post" th:object="${campaign}">
+        <input type="hidden" name="_method" value="put" th:if="${not isNew}"/>
+        <div class="row g-4">
+            <!-- Left column: form sections -->
+            <div class="col-lg-7">
+                <!-- Section 1: Basic Info -->
+                <div class="card mb-3">
+                    <div class="card-header">1. Basic Information</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Campaign name</label>
+                            <input type="text" th:field="*{name}" class="form-control" required maxlength="255"/>
+                            <div class="invalid-feedback d-block" th:if="${#fields.hasErrors('name')}"
+                                 th:errors="*{name}">err</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea th:field="*{description}" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Type</label>
+                                <select th:field="*{type}" class="form-select" required>
+                                    <option value="">Select type…</option>
+                                    <option th:each="t : ${types}" th:value="${t}" th:text="${t}">TYPE</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Store ID</label>
+                                <input type="text" th:field="*{storeId}" class="form-control" maxlength="100"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Schedule with HTMX validation -->
+                <div class="card mb-3">
+                    <div class="card-header">2. Schedule</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Start date</label>
+                                <input type="date" th:field="*{startDate}" class="form-control"
+                                       hx-get="/campaigns/validate/dates"
+                                       hx-trigger="change"
+                                       hx-include="[name='startDate'],[name='endDate']"
+                                       hx-target="#dates-feedback" required/>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">End date</label>
+                                <input type="date" th:field="*{endDate}" class="form-control"
+                                       hx-get="/campaigns/validate/dates"
+                                       hx-trigger="change"
+                                       hx-include="[name='startDate'],[name='endDate']"
+                                       hx-target="#dates-feedback" required/>
+                            </div>
+                        </div>
+                        <div id="dates-feedback" class="form-text">Pick a start and end date.</div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Risk + receipt wording -->
+                <div class="card mb-3">
+                    <div class="card-header">3. Risk &amp; Receipt Wording</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Risk level</label>
+                            <select th:field="*{riskLevel}" class="form-select" required>
+                                <option value="">Select…</option>
+                                <option th:each="r : ${riskLevels}" th:value="${r}" th:text="${r}">RISK</option>
+                            </select>
+                            <div class="form-text">HIGH risk requires dual approval after submission.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Receipt wording</label>
+                            <textarea th:field="*{receiptWording}" class="form-control" rows="4"
+                                      hx-post="/campaigns/preview-receipt"
+                                      hx-trigger="keyup changed delay:400ms"
+                                      hx-include="closest form"
+                                      hx-target="#receipt-preview"
+                                      placeholder="Text that will appear on the receipt — e.g. SAVE 15% with code SPRING15."></textarea>
+                            <div class="form-text">Updates the live preview on the right.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> <span th:text="${isNew} ? 'Create Draft' : 'Save Changes'">Save</span>
+                    </button>
+                    <a th:href="@{/campaigns}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </div>
+
+            <!-- Right column: live receipt preview -->
+            <div class="col-lg-5">
+                <div class="card sticky-top" style="top: 80px;">
+                    <div class="card-header">Receipt Preview <span class="htmx-indicator"></span></div>
+                    <div class="card-body">
+                        <div id="receipt-preview">
+                            <div class="receipt-preview text-muted">
+                                Start typing to see your receipt wording appear here…
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+</body>
+</html>

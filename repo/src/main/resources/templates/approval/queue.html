@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Approval Queue</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="mb-4">
+        <h2>Approval Queue</h2>
+        <p class="text-muted mb-0">Verify campaign rules and approve or reject submissions.</p>
+    </div>
+
+    <div th:if="${#lists.isEmpty(queueItems)}" class="empty-state">
+        <div class="empty-icon"><i class="bi bi-check2-circle"></i></div>
+        <h3>Queue is empty</h3>
+        <p>Nothing pending review right now.</p>
+    </div>
+
+    <div class="row g-3" th:if="${not #lists.isEmpty(queueItems)}">
+        <div class="col-md-6" th:each="q : ${queueItems}">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Campaign #<span th:text="${q.campaignId}">id</span></span>
+                    <span class="status-badge"
+                          th:classappend="'status-' + ${#strings.toLowerCase(q.riskLevel)}"
+                          th:text="${q.riskLevel}">RISK</span>
+                </div>
+                <div class="card-body">
+                    <div class="mb-2"><strong>Submitted by:</strong> <span th:text="${q.requestedBy}">user</span></div>
+                    <div class="mb-2"><strong>Created:</strong>
+                        <span th:text="${#temporals.format(q.createdAt, 'yyyy-MM-dd HH:mm')}">date</span></div>
+                    <div class="mb-3" th:if="${q.riskLevel.name() == 'HIGH'}">
+                        <span class="status-badge status-high">
+                            <i class="bi bi-shield-exclamation"></i> Requires dual approval
+                        </span>
+                    </div>
+                    <form th:action="@{'/approval/' + ${q.id} + '/approve'}" method="post">
+                        <textarea name="notes" class="form-control mb-2" rows="2"
+                                  placeholder="Optional review notes"></textarea>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-sm btn-primary">
+                                <i class="bi bi-check-lg"></i> Approve
+                            </button>
+                            <button type="submit"
+                                    formaction="/approval/__id__/reject"
+                                    th:formaction="@{'/approval/' + ${q.id} + '/reject'}"
+                                    class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-lg"></i> Reject
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
