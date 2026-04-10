@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${SPRING_DATASOURCE_USERNAME:retail_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:retail_pass}
+    password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:retail_pass}}
   jpa:
     hibernate:
       ddl-auto: validate

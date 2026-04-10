@@ -86,21 +86,19 @@ public class RequestSigningFilter extends OncePerRequestFilter {
     }
 
     /**
-     * See NonceValidationFilter.shouldNotFilter — browser form POSTs under /admin/**
-     * are CSRF/session/role-protected and do not carry X-Signature. Skip them so the
-     * admin UI is usable; programmatic JSON callers still flow through signing.
+     * Narrow browser-form bypass (matches NonceValidationFilter). Only
+     * application/x-www-form-urlencoded is exempt; multipart POSTs to /admin/** must
+     * carry a valid X-Signature. Compensating controls for the form bypass are listed
+     * in SecurityDesignDecisions.md.
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String uri = request.getRequestURI();
         if (uri != null && uri.startsWith("/admin/")) {
             String contentType = request.getContentType();
-            if (contentType != null) {
-                String ct = contentType.toLowerCase();
-                if (ct.startsWith("application/x-www-form-urlencoded")
-                        || ct.startsWith("multipart/form-data")) {
-                    return true;
-                }
+            if (contentType != null
+                    && contentType.toLowerCase().startsWith("application/x-www-form-urlencoded")) {
+                return true;
             }
         }
         return false;

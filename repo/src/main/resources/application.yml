@@ -1,17 +1,24 @@
 # Retail Campaign Governance — Application Configuration
 #
-# Secrets (DB password, signing keys, encryption key) are externalized to environment
-# variables with sane local defaults. QA still gets zero-configuration — docker-compose.yml
-# supplies production values and the ${VAR:-default} fallbacks let the app boot without
-# them for local dev / tests. If you add a new secret, add it here with a ${VAR:-default}
-# reference and add the same VAR to docker-compose.yml's `environment:` block.
+# IMPORTANT: this file contains NO plaintext secrets. Every sensitive value is sourced
+# from an environment variable with no built-in default — the app will refuse to start
+# if a secret is missing. docker-compose.yml and docker-compose.test.yml supply working
+# local-dev defaults via `${VAR:-default}`, so `docker compose up --build` still works
+# out of the box. In production, set the env vars from a secret manager.
+#
+# Required secrets:
+#   DB_PASSWORD         — datasource password
+#   HMAC_KEY            — signing key for RequestSigningFilter
+#   ENCRYPTION_KEY      — AES-256-GCM master key for EncryptionService (at-rest encryption)
+#
+# Non-secret values (usernames, URLs, pool sizes) still have safe defaults inline.
 spring:
   application:
     name: retail-campaign
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true}
     username: ${SPRING_DATASOURCE_USERNAME:retail_user}
-    password: ${SPRING_DATASOURCE_PASSWORD:retail_pass}
+    password: ${DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:}}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
@@ -79,9 +86,12 @@ app:
     path: /app/backups
     retention-days: 14
   encryption:
-    key: ${APP_ENCRYPTION_KEY:retail-campaign-aes-key-32chars!!}
+    # AES-256-GCM master key. NO plaintext fallback — supply via ENCRYPTION_KEY env var.
+    # docker-compose.yml sets this. In production, inject from a secret manager.
+    key: ${ENCRYPTION_KEY:${APP_ENCRYPTION_KEY:}}
   signing:
-    secret: ${APP_SIGNING_SECRET:retail-campaign-hmac-signing-key!!}
+    # HMAC-SHA256 signing secret for RequestSigningFilter. Supply via HMAC_KEY env var.
+    secret: ${HMAC_KEY:${APP_SIGNING_SECRET:}}
   rate-limit:
     standard: 60
     export: 10

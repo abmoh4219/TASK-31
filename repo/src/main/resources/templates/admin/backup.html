@@ -11,11 +11,19 @@
             <h2>Backups</h2>
             <p class="text-muted mb-0">Nightly local backups (mysqldump + gzip), 14-day retention.</p>
         </div>
-        <form th:action="@{/admin/backup/run}" method="post">
-            <button type="submit" class="btn btn-primary">
-                <i class="bi bi-play-fill"></i> Run Backup Now
-            </button>
-        </form>
+        <div class="d-flex gap-2">
+            <form th:action="@{/admin/backup/run}" method="post">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-play-fill"></i> Run Backup Now
+                </button>
+            </form>
+            <form th:action="@{/admin/backup/test-restore}" method="post">
+                <button type="submit" class="btn btn-outline-primary"
+                        title="Gunzip the latest backup and verify it parses — non-destructive">
+                    <i class="bi bi-arrow-counterclockwise"></i> Test Restore
+                </button>
+            </form>
+        </div>
     </div>
 
     <div class="card mb-3">
@@ -46,8 +54,10 @@
                         <th>Created</th>
                         <th>Size</th>
                         <th>Status</th>
+                        <th>Last Restore</th>
                         <th>Checksum</th>
                         <th>Notes</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -61,9 +71,25 @@
                                                    b.status.name() == 'FAILED' ? 'status-rejected' : 'status-draft'}"
                                   th:text="${b.status}">STATUS</span>
                         </td>
+                        <td>
+                            <small th:if="${b.restoredAt != null}"
+                                   th:text="${#temporals.format(b.restoredAt, 'yyyy-MM-dd HH:mm')}">restored</small>
+                            <small th:if="${b.restoredAt == null}" class="text-muted">—</small>
+                        </td>
                         <td><code style="font-size:11px;"
                                   th:text="${b.sha256Checksum != null ? #strings.substring(b.sha256Checksum, 0, 12) + '…' : ''}">hash</code></td>
                         <td><small class="text-muted" th:text="${b.notes}">notes</small></td>
+                        <td>
+                            <form th:if="${b.status.name() == 'COMPLETE'}"
+                                  th:action="@{'/admin/backup/' + ${b.id} + '/restore'}"
+                                  method="post"
+                                  onsubmit="return confirm('Restore from this backup? This REPLACES the live database.');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        title="Destructive: replaces the live database">
+                                    <i class="bi bi-arrow-clockwise"></i> Restore
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                 </tbody>
             </table>

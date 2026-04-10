@@ -18,6 +18,11 @@ services:
 
   mysql:
     image: mysql:8.0
+    # --log-bin-trust-function-creators=ON lets non-SUPER users (retail_user) install
+    # stored-routine/trigger objects without needing binary-logging SUPER privileges.
+    # Required for V14__audit_log_immutability.sql which installs triggers at app start.
+    command:
+      - --log-bin-trust-function-creators=ON
     # env_file is loaded after setup creates .env on first run.
     # required:false allows compose-up to parse cleanly when .env doesn't yet exist
     # (the variable-substitution defaults below cover that first-run case).
@@ -52,10 +57,16 @@ services:
     environment:
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://mysql:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-retail_user}
-      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-retail_pass}
+      # DB_PASSWORD is the canonical name. SPRING_DATASOURCE_PASSWORD kept as a
+      # legacy alias so existing operator docs don't break.
+      DB_PASSWORD: ${DB_PASSWORD:-retail_pass}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-retail_pass}
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-com.mysql.cj.jdbc.Driver}
-      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-retail-campaign-aes-key-32chars!!}
-      APP_SIGNING_SECRET: ${APP_SIGNING_SECRET:-retail-campaign-hmac-signing-key!!}
+      # New canonical env vars per BLOCKER #1 fix — encrypted secrets layer.
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-retail-campaign-aes-key-32chars!!}
+      HMAC_KEY: ${HMAC_KEY:-retail-campaign-hmac-signing-key!!}
+      APP_ENCRYPTION_KEY: ${ENCRYPTION_KEY:-retail-campaign-aes-key-32chars!!}
+      APP_SIGNING_SECRET: ${HMAC_KEY:-retail-campaign-hmac-signing-key!!}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
     depends_on:
       mysql:

@@ -1,5 +1,6 @@
 package com.meridian.retail.entity;
 
+import com.meridian.retail.security.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,6 +22,13 @@ public class BackupRecord {
     @Column(name = "filename", nullable = false, length = 500)
     private String filename;
 
+    /**
+     * Absolute path to the backup file on disk. Encrypted at rest via
+     * {@link EncryptedStringConverter} so that an attacker reading a DB dump cannot learn
+     * where on the filesystem to fetch actual backups. Encrypt/decrypt happens transparently
+     * through the JPA converter.
+     */
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "file_path", nullable = false, length = 1000)
     private String filePath;
 

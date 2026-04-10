@@ -20,6 +20,9 @@ services:
 
   mysql-test:
     image: mysql:8.0
+    # See docker-compose.yml — required for V14 trigger installation under non-SUPER user.
+    command:
+      - --log-bin-trust-function-creators=ON
     env_file:
       - path: .env
         required: false
@@ -55,5 +58,10 @@ services:
       IT_DATASOURCE_URL: jdbc:mysql://mysql-test:3306/retail_campaign_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       IT_DATASOURCE_USERNAME: retail_user
       IT_DATASOURCE_PASSWORD: retail_pass
+      # Secrets for the encryption + signing layer. Defaults match application.yml so
+      # the test context can round-trip at-rest encrypted fields.
+      DB_PASSWORD: ${DB_PASSWORD:-retail_pass}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-retail-campaign-aes-key-32chars!!}
+      HMAC_KEY: ${HMAC_KEY:-retail-campaign-hmac-signing-key!!}
       TESTCONTAINERS_RYUK_DISABLED: "true"
     # NO command: override — Dockerfile.test CMD ["sh", "run_tests.sh"] runs automatically

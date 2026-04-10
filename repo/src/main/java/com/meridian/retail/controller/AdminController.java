@@ -2,6 +2,7 @@ package com.meridian.retail.controller;
 
 import com.meridian.retail.audit.SensitiveAccessLogService;
 import com.meridian.retail.backup.BackupService;
+import com.meridian.retail.backup.RestoreService;
 import com.meridian.retail.entity.AnomalyAlert;
 import com.meridian.retail.entity.BackupRecord;
 import com.meridian.retail.entity.User;
@@ -51,6 +52,7 @@ public class AdminController {
     private final AnomalyAlertRepository anomalyAlertRepository;
     private final BackupRecordRepository backupRecordRepository;
     private final BackupService backupService;
+    private final RestoreService restoreService;
     private final UserService userService;
     private final UserRepository userRepository;
     private final RoleChangeService roleChangeService;
@@ -121,6 +123,43 @@ public class AdminController {
         BackupRecord r = backupService.runManualBackup(auth.getName(), clientIp(httpRequest));
         redirect.addFlashAttribute("successMessage",
                 "Backup " + (r.getStatus().name().equals("COMPLETE") ? "completed" : "FAILED") + ": " + r.getFilename());
+        return "redirect:/admin/backup";
+    }
+
+    /**
+     * Restore drill: verifies the latest COMPLETE backup deserializes cleanly WITHOUT
+     * touching the live DB. Updates restoredAt on the verified backup row.
+     */
+    @PostMapping("/backup/test-restore")
+    public String testRestore(Authentication auth, HttpServletRequest httpRequest, RedirectAttributes redirect) {
+        var result = restoreService.testRestoreLatest(auth.getName(), clientIp(httpRequest));
+        if (result.success()) {
+            redirect.addFlashAttribute("successMessage",
+                    "Test-restore OK: " + result.message() + " (" + result.durationMs() + " ms)");
+        } else {
+            redirect.addFlashAttribute("errorMessage",
+                    "Test-restore FAILED: " + result.message());
+        }
+        return "redirect:/admin/backup";
+    }
+
+    /**
+     * Full restore from a specific backup row. Destructive — intended only during a
+     * real disaster recovery. Always routed through the /admin/** filters.
+     */
+    @PostMapping("/backup/{id}/restore")
+    public String restore(@PathVariable Long id,
+                          Authentication auth,
+                          HttpServletRequest httpRequest,
+                          RedirectAttributes redirect) {
+        var result = restoreService.restoreFromBackup(id, auth.getName(), clientIp(httpRequest));
+        if (result.success()) {
+            redirect.addFlashAttribute("successMessage",
+                    "Restore completed: " + result.message());
+        } else {
+            redirect.addFlashAttribute("errorMessage",
+                    "Restore failed: " + result.message());
+        }
         return "redirect:/admin/backup";
     }
 

@@ -53,14 +53,33 @@ class AuditLogServiceTest {
 
     @Test
     void repositoryHasNoUpdateOrDeleteMethods() {
-        // Defence in depth: AuditLogRepository must NOT expose any update or delete operation
-        // outside the JpaRepository defaults. We assert that no custom delete/update methods
-        // were added to the interface.
-        Method[] declared = AuditLogRepository.class.getDeclaredMethods();
-        for (Method m : declared) {
+        // R3 hardening: check the FULL method surface (including inherited),
+        // because the previous check only saw locally-declared methods. The repository
+        // now extends Spring Data's Repository base instead of JpaRepository, so no
+        // delete*/deleteAll*/saveAll methods should be visible at all.
+        Method[] all = AuditLogRepository.class.getMethods();
+        for (Method m : all) {
             String name = m.getName().toLowerCase();
-            assertThat(name).doesNotContain("delete");
-            assertThat(name).doesNotContain("update");
+            assertThat(name)
+                    .as("method %s must not be a delete mutator", m.getName())
+                    .doesNotContain("delete");
+            // "saveAll" is a JpaRepository-style batch mutator that implicitly permits
+            // update via merge semantics — also banned.
+            assertThat(name).isNotEqualTo("saveall");
+        }
+    }
+
+    @Test
+    void auditLogEntityHasNoSetters() {
+        // Defence-in-depth layer 1: the entity itself must be immutable. Lombok @Setter
+        // would generate public setXxx methods; we removed @Setter in R3, so none must
+        // exist on AuditLog.
+        Method[] methods = AuditLog.class.getMethods();
+        for (Method m : methods) {
+            if (m.getDeclaringClass() == Object.class) continue;
+            assertThat(m.getName())
+                    .as("AuditLog must have no setters")
+                    .doesNotStartWith("set");
         }
     }
 }

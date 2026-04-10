@@ -49,9 +49,10 @@ class CampaignAccessPolicyTest {
 
     @Test
     void creatorSeesOwnCampaign() {
+        // Creator check short-circuits before the approval-queue lookup, so we don't
+        // stub approvalQueueRepository here — Mockito strict-stubs would complain.
         Campaign c = Campaign.builder().id(7L).createdBy("alice").build();
         when(campaignRepository.findById(7L)).thenReturn(Optional.of(c));
-        when(approvalQueueRepository.findByCampaignIdOrderByCreatedAtDesc(7L)).thenReturn(List.of());
 
         assertThat(policy.canAccessCampaign(7L, authAs("alice", "ROLE_OPERATIONS"))).isTrue();
     }

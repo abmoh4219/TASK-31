@@ -33,8 +33,10 @@
                     </div>
                     <form th:action="@{'/content/' + ${item.id} + '/rollback/' + ${v.versionNum}}" method="post"
                           sec:authorize="hasAnyRole('REVIEWER','ADMIN')">
+                        <input type="hidden" name="targetVersion" th:value="${v.versionNum}"/>
                         <button type="submit" class="btn btn-sm btn-outline-warning"
-                                onclick="return confirm('Roll back to version ' + this.form.elements.length + '?');">
+                                th:attr="data-target-version=${v.versionNum}"
+                                onclick="return confirm('Roll back to version ' + this.getAttribute('data-target-version') + '?');">
                             <i class="bi bi-arrow-counterclockwise"></i> Rollback
                         </button>
                     </form>

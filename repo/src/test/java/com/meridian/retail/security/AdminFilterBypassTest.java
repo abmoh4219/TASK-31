@@ -46,12 +46,43 @@ class AdminFilterBypassTest {
         MockHttpServletRequest req = new MockHttpServletRequest();
         req.setMethod("POST");
         req.setRequestURI("/admin/users");
-        req.setContentType("multipart/form-data; boundary=xxx");
+        req.setContentType("application/x-www-form-urlencoded");
         MockHttpServletResponse res = new MockHttpServletResponse();
 
         f.doFilter(req, res, chain);
 
         verify(chain).doFilter(req, res);
+    }
+
+    /** R3 tightening: multipart/form-data under /admin/** must NOT be exempt. */
+    @Test
+    void signingFilterRejectsAdminMultipartWithoutSignature() throws Exception {
+        RequestSigningFilter f = new RequestSigningFilter();
+        ReflectionTestUtils.setField(f, "signingSecret", "retail-campaign-hmac-signing-key!!");
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setMethod("POST");
+        req.setRequestURI("/admin/users");
+        req.setContentType("multipart/form-data; boundary=xxx");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        f.doFilter(req, res, chain);
+
+        verify(chain, never()).doFilter(req, res);
+    }
+
+    /** R3 tightening: multipart/form-data under /admin/** must NOT be exempt from nonce either. */
+    @Test
+    void nonceFilterRejectsAdminMultipartWithoutHeaders() throws Exception {
+        NonceValidationFilter f = new NonceValidationFilter(null);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setMethod("POST");
+        req.setRequestURI("/admin/users");
+        req.setContentType("multipart/form-data; boundary=xxx");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        f.doFilter(req, res, chain);
+
+        verify(chain, never()).doFilter(req, res);
     }
 
     @Test

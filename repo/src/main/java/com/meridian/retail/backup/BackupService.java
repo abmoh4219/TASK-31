@@ -88,16 +88,34 @@ public class BackupService {
             String dbName = extractDbName(datasourceUrl);
             String dbHost = extractDbHost(datasourceUrl);
 
-            // mysqldump <db> | gzip > target  — invoked via /bin/sh -c so the pipe works.
-            ProcessBuilder pb = new ProcessBuilder("/bin/sh", "-c",
-                    "mysqldump -h " + dbHost
-                            + " -u " + datasourceUsername
-                            + " -p" + datasourcePassword
-                            + " " + dbName
-                            + " 2>/dev/null | gzip > " + target.toAbsolutePath());
+            // HIGH #5 fix: DB password must NEVER appear in process arguments
+            // (visible via /proc/*/cmdline, process list, shell history). Pass it
+            // through the MYSQL_PWD environment variable instead. mysqldump itself
+            // can then write directly to the target via --result-file, and we gzip
+            // the result in Java to avoid /bin/sh -c string interpolation.
+            Path rawSql = Files.createTempFile(dir, "backup_raw_", ".sql");
+            ProcessBuilder pb = new ProcessBuilder(
+                    "mysqldump",
+                    "-h", dbHost,
+                    "-u", datasourceUsername,
+                    "--result-file=" + rawSql.toAbsolutePath(),
+                    dbName);
+            pb.environment().put("MYSQL_PWD", datasourcePassword);
             pb.redirectErrorStream(true);
             Process p = pb.start();
             int exit = p.waitFor();
+
+            // Gzip the raw dump into the target file, then delete the plaintext temp.
+            if (exit == 0 && Files.exists(rawSql)) {
+                try (var in = Files.newInputStream(rawSql);
+                     var out = Files.newOutputStream(target);
+                     var gzip = new java.util.zip.GZIPOutputStream(out)) {
+                    byte[] buf = new byte[16 * 1024];
+                    int n;
+                    while ((n = in.read(buf)) > 0) gzip.write(buf, 0, n);
+                }
+            }
+            try { Files.deleteIfExists(rawSql); } catch (IOException ignored) { }
 
             BackupStatus status = (exit == 0 && Files.exists(target) && Files.size(target) > 0)
                     ? BackupStatus.COMPLETE
@@ -130,6 +148,23 @@ public class BackupService {
                     .build();
             return backupRecordRepository.save(rec);
         }
+    }
+
+    /**
+     * Visible-for-tests: construct the mysqldump ProcessBuilder without executing it.
+     * Lets BackupCommandSafetyTest assert the password is NEVER in the argument list.
+     */
+    public static ProcessBuilder buildMysqldumpCommand(String dbHost, String dbUser,
+                                                       String dbPassword, String dbName,
+                                                       Path resultFile) {
+        ProcessBuilder pb = new ProcessBuilder(
+                "mysqldump",
+                "-h", dbHost,
+                "-u", dbUser,
+                "--result-file=" + resultFile.toAbsolutePath(),
+                dbName);
+        pb.environment().put("MYSQL_PWD", dbPassword);
+        return pb;
     }
 
     private void pruneExpired() {

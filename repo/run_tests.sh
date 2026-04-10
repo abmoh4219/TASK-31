@@ -14,9 +14,12 @@ UNIT_FAILED=0
 INTEGRATION_FAILED=0
 
 echo ""
-echo "--- Unit Tests (Service layer, no DB required) ---"
+echo "--- Unit Tests (Mockito + plain JUnit, no Spring context, no DB) ---"
+# Unit tests here are pure Mockito tests under src/test/java/com/meridian/retail/service,
+# security, backup. They do NOT load Spring and do NOT touch MySQL — safe to run on any
+# machine. (The *Policy/*Filter/*Validator/*Service name patterns all match this set.)
 $MVN test \
-  -Dtest="*ServiceTest,*FilterTest,*ValidatorTest,*UtilTest,*MapperTest" \
+  -Dtest="*ServiceTest,*FilterTest,*ValidatorTest,*UtilTest,*MapperTest,*PolicyTest,*SafetyTest" \
   -DfailIfNoTests=false \
   -Dspring.profiles.active=test 2>&1 || UNIT_FAILED=1
 
@@ -27,7 +30,13 @@ else
 fi
 
 echo ""
-echo "--- Integration Tests (Full Spring context + real MySQL) ---"
+echo "--- Integration Tests (full Spring context + REAL MySQL 8) ---"
+# Integration tests boot @SpringBootTest and require a live MySQL 8 instance. Under
+# docker-compose.test.yml the tests connect to the sibling mysql-test service (via the
+# IT_DATASOURCE_URL env var set in that compose file). Outside compose, the
+# AbstractIntegrationTest base class starts a Testcontainers MySQL instance on demand.
+# These tests are the only ones that touch the DB and verify Flyway migrations, JPA
+# schema validation, and the @PreAuthorize filter chain end-to-end.
 $MVN test \
   -Dtest="*IntegrationTest,*IT,SecurityIntegrationTest" \
   -DfailIfNoTests=false \

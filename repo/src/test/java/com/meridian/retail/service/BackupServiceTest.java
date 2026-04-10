@@ -19,6 +19,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -47,7 +48,11 @@ class BackupServiceTest {
             r.setId(1L);
             return r;
         });
-        when(backupRecordRepository.findByStatusAndCreatedAtBefore(any(BackupStatus.class), any()))
+        // The R3 mysqldump rewrite uses ProcessBuilder.start() directly; when mysqldump
+        // isn't on PATH (as in this pure-unit JVM) start() throws IOException and the
+        // service jumps to the catch block WITHOUT running pruneExpired(), so this stub
+        // may or may not be hit. Lenient so strict-stubs doesn't fail the test.
+        lenient().when(backupRecordRepository.findByStatusAndCreatedAtBefore(any(BackupStatus.class), any()))
                 .thenReturn(List.of());
 
         BackupRecord r = svc.runManualBackup("admin", "127.0.0.1");

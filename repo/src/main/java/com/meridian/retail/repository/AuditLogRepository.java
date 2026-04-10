@@ -3,28 +3,39 @@ package com.meridian.retail.repository;
 import com.meridian.retail.entity.AuditLog;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
- * AuditLogRepository — IMMUTABLE BY DESIGN.
+ * Audit log repository — IMMUTABLE BY DESIGN.
  *
- * No update() or delete() operations are exposed here. The only write path is save()
- * (which JpaRepository provides for INSERTs). Any attempt to call .deleteById(),
- * .deleteAll(), etc. should be considered a security violation and is intentionally
- * absent from the contract — Spring Data inherits these from JpaRepository, so we
- * additionally enforce the policy at the service layer (AuditLogService) and document
- * it here so static-audit reviewers can verify the design.
+ * Extends Spring Data's {@link Repository} base (not {@link
+ * org.springframework.data.jpa.repository.JpaRepository}) so that {@code delete*},
+ * {@code deleteAll}, {@code saveAll} and other mutating helpers are NOT inherited.
+ * Only insert ({@code save} of a new entity) and read operations are exposed. Any
+ * attempt to mutate an existing row is additionally rejected by the
+ * {@code prevent_audit_update} / {@code prevent_audit_delete} triggers from V14.
  *
- * IMMUTABLE: No update or delete operations permitted by design.
+ * {@code AuditLogServiceTest.repositoryExposesNoMutators} is the reflection-based
+ * regression test for this policy.
  */
-@Repository
-public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
+@org.springframework.stereotype.Repository
+public interface AuditLogRepository extends org.springframework.data.repository.Repository<AuditLog, Long> {
+
+    /** Insert-only. The parameter must be a fresh entity without an id. */
+    <S extends AuditLog> S save(S entity);
+
+    Optional<AuditLog> findById(Long id);
+
+    long count();
+
+    List<AuditLog> findAll();
+
+    Page<AuditLog> findAll(Pageable pageable);
 
     Page<AuditLog> findAllByOrderByCreatedAtDesc(Pageable pageable);
 

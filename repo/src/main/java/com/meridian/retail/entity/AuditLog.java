@@ -6,14 +6,18 @@ import lombok.*;
 import java.time.LocalDateTime;
 
 /**
- * Immutable audit record. There is intentionally NO @PreUpdate hook and NO updated_at column
- * — these records are written once and never modified. The repository must not expose any
- * update operation.
+ * Immutable audit record. Three layers of defence:
+ *   1. Java layer — no {@code @Setter}; fields only settable via {@code @Builder} at
+ *      construction time.
+ *   2. Spring Data layer — {@code AuditLogRepository} extends {@code Repository} (not
+ *      {@code JpaRepository}) and exposes only insert + read operations.
+ *   3. Database layer — V14 installs MySQL triggers that reject UPDATE and DELETE on
+ *      the {@code audit_logs} table with SQLSTATE 45000.
+ * No {@code @PreUpdate} hook and no {@code updated_at} column.
  */
 @Entity
 @Table(name = "audit_logs")
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

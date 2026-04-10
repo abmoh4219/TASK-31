@@ -47,7 +47,11 @@ public abstract class AbstractIntegrationTest {
                 MYSQL = new MySQLContainer<>("mysql:8.0")
                         .withDatabaseName("retail_campaign_test")
                         .withUsername("retail_user")
-                        .withPassword("retail_pass");
+                        .withPassword("retail_pass")
+                        // V14 installs immutability triggers. With binary logging enabled
+                        // (MySQL 8 default) a non-SUPER user can't create triggers unless
+                        // log_bin_trust_function_creators=ON.
+                        .withCommand("--log-bin-trust-function-creators=ON");
                 MYSQL.start();
                 Runtime.getRuntime().addShutdownHook(new Thread(MYSQL::stop));
             }
