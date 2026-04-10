@@ -25,3 +25,18 @@ app:
     path: /tmp/retail-test/uploads
   backup:
     path: /tmp/retail-test/backups
+  # ──────────────────────────────────────────────────────────────────────────────
+  # TEST-ONLY secrets. Active only when SPRING_PROFILES_ACTIVE=test (CI + local
+  # ./mvnw test). Docker / production runs with SPRING_PROFILES_ACTIVE=docker,
+  # so these values are never loaded outside tests and the real ENCRYPTION_KEY /
+  # HMAC_KEY env vars from docker-compose.yml continue to drive prod behaviour.
+  #
+  # Both keys are dummy strings used solely to satisfy the non-blank validation
+  # in EncryptionService — they are NEVER reused in any other environment.
+  # AES-256-GCM: SHA-256 stretches any input to a 256-bit key, but we still
+  # provide an exact 32-character string so the bytes match what AES-256 expects
+  # if any future code path skips the SHA-256 stretch.
+  encryption:
+    key: "ci-test-key-DO-NOT-USE-IN-PROD!!"   # 32 chars, test profile only
+  signing:
+    secret: "ci-test-hmac-DO-NOT-USE-IN-PROD!"  # 32 chars, test profile only
