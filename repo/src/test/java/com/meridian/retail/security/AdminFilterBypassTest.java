@@ -1,5 +1,6 @@
 package com.meridian.retail.security;
 
+import com.meridian.retail.repository.UsedNonceRepository;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,22 +12,26 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
- * BLOCKER #1 regression: browser form POSTs to /admin/** must pass straight through
- * both the nonce filter AND the signing filter, because admin Thymeleaf forms have no
- * way to produce X-Nonce / X-Signature / X-Timestamp headers and are already protected
- * by CSRF + session auth + RBAC. Only JSON / programmatic callers should be subjected
- * to the anti-replay + signing checks.
+ * R4 HIGH #1 + #2 (audit re-check): NEITHER NonceValidationFilter NOR
+ * RequestSigningFilter carries a form-encoded bypass for /admin/**. Browser form POSTs
+ * must include {@code _nonce}, {@code _timestamp}, and {@code _signature} hidden fields
+ * injected by {@code static/js/nonce-form.js}. The signature is fetched from
+ * {@code POST /admin/sign-form}, which keeps the HMAC secret on the server.
  */
 @ExtendWith(MockitoExtension.class)
 class AdminFilterBypassTest {
 
     @Mock FilterChain chain;
+    @Mock UsedNonceRepository usedNonceRepository;
 
     @Test
-    void nonceFilterSkipsAdminFormPost() throws Exception {
-        NonceValidationFilter f = new NonceValidationFilter(null);
+    void nonceFilterRejectsAdminFormPostWithoutNonce() throws Exception {
+        // R4 HIGH #2: blanket form-encoded bypass removed. A form POST to /admin/**
+        // without _nonce/_timestamp must now be rejected.
+        NonceValidationFilter f = new NonceValidationFilter(usedNonceRepository);
         MockHttpServletRequest req = new MockHttpServletRequest();
         req.setMethod("POST");
         req.setRequestURI("/admin/users");
@@ -35,18 +40,106 @@ class AdminFilterBypassTest {
 
         f.doFilter(req, res, chain);
 
-        // No 400 (missing header), chain was invoked normally.
+        org.assertj.core.api.Assertions.assertThat(res.getStatus()).isEqualTo(400);
+        verify(chain, never()).doFilter(req, res);
+    }
+
+    @Test
+    void nonceFilterAcceptsAdminFormPostWithNonceFormFields() throws Exception {
+        // The browser-friendly path: hidden _nonce + _timestamp form params satisfy the
+        // anti-replay check (no header required).
+        when(usedNonceRepository.existsByNonce("nonce-form-1")).thenReturn(false);
+        NonceValidationFilter f = new NonceValidationFilter(usedNonceRepository);
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setMethod("POST");
+        req.setRequestURI("/admin/users");
+        req.setContentType("application/x-www-form-urlencoded");
+        req.setParameter("_nonce", "nonce-form-1");
+        req.setParameter("_timestamp", String.valueOf(System.currentTimeMillis()));
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        f.doFilter(req, res, chain);
+
         verify(chain).doFilter(req, res);
     }
 
     @Test
-    void signingFilterSkipsAdminFormPost() throws Exception {
+    void signingFilterRejectsAdminFormPostWithoutSignature() throws Exception {
+        // R4 audit re-check fix: form-encoded bypass removed. A POST under /admin/**
+        // without _signature must now be rejected with 403.
         RequestSigningFilter f = new RequestSigningFilter();
         ReflectionTestUtils.setField(f, "signingSecret", "retail-campaign-hmac-signing-key!!");
         MockHttpServletRequest req = new MockHttpServletRequest();
         req.setMethod("POST");
         req.setRequestURI("/admin/users");
         req.setContentType("application/x-www-form-urlencoded");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        f.doFilter(req, res, chain);
+
+        org.assertj.core.api.Assertions.assertThat(res.getStatus()).isEqualTo(403);
+        verify(chain, never()).doFilter(req, res);
+    }
+
+    @Test
+    void signingFilterAcceptsAdminFormPostWithValidSignatureFormFields() throws Exception {
+        // The browser-friendly path: hidden _nonce/_timestamp/_signature form params
+        // satisfy the signing check using the form-mode canonical
+        // (method + path + timestamp + nonce, no body hash).
+        String secret = "retail-campaign-hmac-signing-key!!";
+        RequestSigningFilter f = new RequestSigningFilter();
+        ReflectionTestUtils.setField(f, "signingSecret", secret);
+
+        String method = "POST";
+        String path = "/admin/users";
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        String nonce = "browser-nonce-1";
+        String expected = f.signFormCanonical(method, path, timestamp, nonce);
+
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setMethod(method);
+        req.setRequestURI(path);
+        req.setContentType("application/x-www-form-urlencoded");
+        req.setParameter("_nonce", nonce);
+        req.setParameter("_timestamp", timestamp);
+        req.setParameter("_signature", expected);
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        f.doFilter(req, res, chain);
+
+        verify(chain).doFilter(req, res);
+    }
+
+    @Test
+    void signingFilterRejectsAdminFormPostWithBadSignature() throws Exception {
+        RequestSigningFilter f = new RequestSigningFilter();
+        ReflectionTestUtils.setField(f, "signingSecret", "retail-campaign-hmac-signing-key!!");
+
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setMethod("POST");
+        req.setRequestURI("/admin/users");
+        req.setContentType("application/x-www-form-urlencoded");
+        req.setParameter("_nonce", "browser-nonce-2");
+        req.setParameter("_timestamp", String.valueOf(System.currentTimeMillis()));
+        req.setParameter("_signature", "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        f.doFilter(req, res, chain);
+
+        org.assertj.core.api.Assertions.assertThat(res.getStatus()).isEqualTo(403);
+        verify(chain, never()).doFilter(req, res);
+    }
+
+    @Test
+    void signingFilterSkipsSignFormEndpoint() throws Exception {
+        // /admin/sign-form must NOT be subject to the signing filter — it issues the
+        // very signature this filter validates. Spring Security ROLE_ADMIN still gates it.
+        RequestSigningFilter f = new RequestSigningFilter();
+        ReflectionTestUtils.setField(f, "signingSecret", "retail-campaign-hmac-signing-key!!");
+        MockHttpServletRequest req = new MockHttpServletRequest();
+        req.setMethod("POST");
+        req.setRequestURI("/admin/sign-form");
+        req.setContentType("application/json");
         MockHttpServletResponse res = new MockHttpServletResponse();
 
         f.doFilter(req, res, chain);

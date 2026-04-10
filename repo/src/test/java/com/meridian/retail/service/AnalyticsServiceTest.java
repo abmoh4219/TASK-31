@@ -29,9 +29,10 @@ class AnalyticsServiceTest {
 
     @Test
     void couponStatsAggregatesIssuanceAndRedemptions() {
-        Coupon c1 = Coupon.builder().id(1L).maxUses(100).build();
-        Coupon c2 = Coupon.builder().id(2L).maxUses(50).build();
-        when(couponRepository.findAll()).thenReturn(List.of(c1, c2));
+        // R4 HIGH #4: issuance now goes through the filter-aware repository query
+        // (sumMaxUsesByCampaignFilters), not findAll().sum.
+        when(couponRepository.sumMaxUsesByCampaignFilters(eq("STORE-001"), any(), any()))
+                .thenReturn(150L);
         when(redemptionRepository.countRedemptions(eq("STORE-001"), any(), any())).thenReturn(42L);
 
         var stats = svc.getCouponStats("STORE-001", null, null);

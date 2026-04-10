@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en"
       xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
       layout:decorate="~{layout/base}">
 <head>
@@ -17,8 +18,18 @@
             </p>
             <div class="alert alert-warning text-start mt-3">
                 <strong>Why am I blocked?</strong>
-                <p class="mb-0" th:text="${blockReason != null ? blockReason : 'This page requires a role you do not currently have. Please contact an administrator if you believe you should have access.'}">
+                <p class="mb-2" th:text="${blockReason != null ? blockReason : 'Your current role does not have permission to perform this action.'}">
                     This page requires a higher role.
+                </p>
+                <p class="mb-1" sec:authorize="isAuthenticated()">
+                    Signed in as
+                    <code sec:authentication="name">user</code>
+                    with role
+                    <code sec:authentication="principal.authorities">[ROLE]</code>.
+                </p>
+                <p class="mb-0">
+                    If you believe you should have access, contact your administrator
+                    so they can grant the required role through the role-change workflow.
                 </p>
             </div>
             <a th:href="@{/}" class="btn btn-primary mt-2">

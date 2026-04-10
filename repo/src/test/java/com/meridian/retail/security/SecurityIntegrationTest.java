@@ -109,20 +109,63 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
     }
 
     /**
-     * BLOCKER #1 regression — admin form POSTs must NOT be blocked by the anti-replay
-     * nonce filter. Before the fix any POST under /admin/** without X-Nonce + X-Timestamp
-     * was rejected with 400, breaking every admin UI action.
+     * R4 HIGH #2 — admin form POSTs WITH _nonce/_timestamp/_signature form fields (the
+     * browser path enriched by {@code static/js/nonce-form.js}) must pass through both
+     * NonceValidationFilter and RequestSigningFilter and reach the controller layer.
+     * POSTs WITHOUT those fields must be rejected — see {@link AdminFilterBypassTest}.
      */
     @Test
     @WithMockUser(username = "admin", roles = {"ADMIN"})
-    void adminFormPostNotBlockedByNonceFilter() throws Exception {
-        // POST to a non-existent admin endpoint — we expect 4xx (404) but crucially
-        // NOT 400 "Missing X-Nonce" and NOT 403 "Invalid request signature".
+    void adminFormPostWithSignedNonceFieldsPassesAllFilters() throws Exception {
+        String nonce = java.util.UUID.randomUUID().toString();
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        String path = "/admin/does-not-exist";
+        // Compute the form-mode signature with the same secret as application.yml.
+        String signature = signFormCanonical("POST", path, timestamp, nonce);
+
+        mockMvc.perform(post(path)
+                        .contentType("application/x-www-form-urlencoded")
+                        .param("foo", "bar")
+                        .param("_nonce", nonce)
+                        .param("_timestamp", timestamp)
+                        .param("_signature", signature)
+                        .with(csrf()))
+                .andExpect(status().isNotFound()); // controller path doesn't exist, but filters passed
+    }
+
+    /** Negative path through the integration stack: admin form POST without nonce -> 400. */
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void adminFormPostWithoutNonceRejectedByFilter() throws Exception {
         mockMvc.perform(post("/admin/does-not-exist")
                         .contentType("application/x-www-form-urlencoded")
                         .param("foo", "bar")
                         .with(csrf()))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isBadRequest());
+    }
+
+    /** Negative: admin form POST with nonce but without signature -> 403 from signing filter. */
+    @Test
+    @WithMockUser(username = "admin", roles = {"ADMIN"})
+    void adminFormPostWithoutSignatureRejectedBySigningFilter() throws Exception {
+        mockMvc.perform(post("/admin/does-not-exist")
+                        .contentType("application/x-www-form-urlencoded")
+                        .param("foo", "bar")
+                        .param("_nonce", java.util.UUID.randomUUID().toString())
+                        .param("_timestamp", String.valueOf(System.currentTimeMillis()))
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    private String signFormCanonical(String method, String path, String timestamp, String nonce)
+            throws Exception {
+        String secret = "retail-campaign-hmac-signing-key!!";
+        String canonical = method + "\n" + path + "\n" + timestamp + "\n" + nonce;
+        javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new javax.crypto.spec.SecretKeySpec(
+                secret.getBytes(java.nio.charset.StandardCharsets.UTF_8), "HmacSHA256"));
+        byte[] sig = mac.doFinal(canonical.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        return java.util.HexFormat.of().formatHex(sig);
     }
 
     /** HIGH #6: coupon list must be reachable for authenticated users. */

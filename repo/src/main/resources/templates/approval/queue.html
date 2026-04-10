@@ -66,14 +66,19 @@
                         </div>
                     </form>
 
-                    <!-- HIGH: first approval (not yet recorded) -->
+                    <!-- HIGH: first approval (not yet recorded). Submitted via the
+                         nonce-signing JS below so NonceValidationFilter can enforce
+                         anti-replay on the actual completion path (R4 HIGH #1). -->
                     <form th:if="${isHigh and not firstDone}"
+                          class="js-nonce-form"
                           th:action="@{'/approval/' + ${q.id} + '/approve-first'}" method="post">
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-sm btn-warning">
                                 <i class="bi bi-person-check"></i> First Approval
                             </button>
                             <button type="submit"
+                                    formnovalidate
+                                    data-skip-nonce="true"
                                     th:formaction="@{'/approval/' + ${q.id} + '/reject'}"
                                     class="btn btn-sm btn-outline-danger">
                                 <i class="bi bi-x-lg"></i> Reject
@@ -81,8 +86,9 @@
                         </div>
                     </form>
 
-                    <!-- HIGH: second approval (first already recorded) -->
+                    <!-- HIGH: second approval (first already recorded). Same nonce flow. -->
                     <form th:if="${isHigh and firstDone}"
+                          class="js-nonce-form"
                           th:action="@{'/approval/' + ${q.id} + '/approve-second'}" method="post">
                         <textarea name="notes" class="form-control mb-2" rows="2"
                                   placeholder="Optional review notes"></textarea>
@@ -94,6 +100,8 @@
                                 <i class="bi bi-check2-all"></i> Second Approval
                             </button>
                             <button type="submit"
+                                    formnovalidate
+                                    data-skip-nonce="true"
                                     th:formaction="@{'/approval/' + ${q.id} + '/reject'}"
                                     class="btn btn-sm btn-outline-danger">
                                 <i class="bi bi-x-lg"></i> Reject
@@ -108,5 +116,9 @@
         </div>
     </div>
 </div>
+
+<!-- Anti-replay nonce injection is handled globally by static/js/nonce-form.js
+     (loaded from layout/base.html). It auto-arms the approve-first/approve-second
+     forms below by URL pattern, so no per-page wiring is needed. -->
 </body>
 </html>

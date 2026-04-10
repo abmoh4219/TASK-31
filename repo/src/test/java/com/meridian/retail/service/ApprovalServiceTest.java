@@ -29,6 +29,7 @@ class ApprovalServiceTest {
     @Mock CampaignRepository campaignRepository;
     @Mock DualApprovalService dualApprovalService;
     @Mock AuditLogService auditLogService;
+    @Mock CouponService couponService;
     @InjectMocks ApprovalService svc;
 
     @Test

@@ -48,6 +48,12 @@ public class BackupRecord {
     @Column(name = "restored_at")
     private LocalDateTime restoredAt;
 
+    /**
+     * Backup notes can include the operator name, exit codes and exception messages
+     * (system internals). Encrypted at rest alongside file_path so a leaked DB dump
+     * does not reveal infrastructure details.
+     */
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 

@@ -24,6 +24,7 @@ class CouponServiceTest {
 
     @Mock CouponRepository couponRepository;
     @Mock CampaignService campaignService;
+    @Mock com.meridian.retail.repository.CampaignRepository campaignRepository;
     @Mock com.meridian.retail.audit.AuditLogService auditLogService;
     @InjectMocks CouponService svc;
 

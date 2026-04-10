@@ -4,7 +4,10 @@ import com.meridian.retail.audit.AuditAction;
 import com.meridian.retail.audit.AuditLogService;
 import com.meridian.retail.dto.CouponDTO;
 import com.meridian.retail.dto.CreateCouponRequest;
+import com.meridian.retail.entity.Campaign;
+import com.meridian.retail.entity.CampaignStatus;
 import com.meridian.retail.entity.Coupon;
+import com.meridian.retail.repository.CampaignRepository;
 import com.meridian.retail.repository.CouponRepository;
 import com.meridian.retail.security.XssInputSanitizer;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -22,6 +26,7 @@ public class CouponService {
 
     private final CouponRepository couponRepository;
     private final CampaignService campaignService;
+    private final CampaignRepository campaignRepository;
     private final AuditLogService auditLogService;
 
     public List<Coupon> listByCampaign(Long campaignId) {
@@ -135,5 +140,75 @@ public class CouponService {
             }
         }
         return true;
+    }
+
+    /**
+     * Pre-approval validation hook called by ApprovalService before flipping a campaign
+     * to APPROVED. Looks at every coupon attached to the candidate campaign and checks
+     * for stacking / mutual-exclusion conflicts against coupons that already belong to
+     * APPROVED (or beyond) campaigns in the SAME store.
+     *
+     * Returns a list of human-readable conflict messages — empty when the campaign is
+     * safe to approve. The caller is responsible for translating a non-empty list into
+     * an exception or UI error.
+     *
+     * Conflict rules:
+     *   - A non-stackable candidate coupon vs ANY existing live coupon in the same store -> conflict.
+     *   - A candidate coupon whose mutual_exclusion_group matches a live coupon in the same store -> conflict.
+     */
+    public List<String> findApprovalStackingConflicts(Long campaignId) {
+        List<String> conflicts = new ArrayList<>();
+        Campaign candidate = campaignRepository.findById(campaignId).orElse(null);
+        if (candidate == null) return conflicts;
+
+        List<Coupon> candidateCoupons = couponRepository.findByCampaignId(campaignId);
+        if (candidateCoupons.isEmpty()) return conflicts;
+
+        // "Live" = APPROVED or ACTIVE campaigns in the same store, excluding the candidate itself.
+        List<Campaign> liveCampaigns = campaignRepository.findAll().stream()
+                .filter(c -> !c.getId().equals(campaignId))
+                .filter(c -> c.getDeletedAt() == null)
+                .filter(c -> c.getStatus() == CampaignStatus.APPROVED
+                          || c.getStatus() == CampaignStatus.ACTIVE)
+                .filter(c -> {
+                    if (candidate.getStoreId() == null && c.getStoreId() == null) return true;
+                    if (candidate.getStoreId() == null || c.getStoreId() == null) return false;
+                    return candidate.getStoreId().equalsIgnoreCase(c.getStoreId());
+                })
+                .toList();
+
+        if (liveCampaigns.isEmpty()) return conflicts;
+
+        List<Coupon> liveCoupons = new ArrayList<>();
+        for (Campaign c : liveCampaigns) {
+            liveCoupons.addAll(couponRepository.findByCampaignId(c.getId()));
+        }
+        if (liveCoupons.isEmpty()) return conflicts;
+
+        for (Coupon cand : candidateCoupons) {
+            if (!cand.isStackable()) {
+                for (Coupon live : liveCoupons) {
+                    conflicts.add("Coupon '" + cand.getCode() + "' is non-stackable but campaign '"
+                            + campaignNameOf(live.getCampaignId()) + "' already has live coupon '"
+                            + live.getCode() + "' in the same store");
+                    break; // one conflict per candidate coupon is enough
+                }
+            }
+            String group = cand.getMutualExclusionGroup();
+            if (group != null && !group.isBlank()) {
+                for (Coupon live : liveCoupons) {
+                    if (group.equalsIgnoreCase(live.getMutualExclusionGroup())) {
+                        conflicts.add("Coupon '" + cand.getCode() + "' shares exclusion group '"
+                                + group + "' with live coupon '" + live.getCode() + "' from campaign '"
+                                + campaignNameOf(live.getCampaignId()) + "'");
+                    }
+                }
+            }
+        }
+        return conflicts;
+    }
+
+    private String campaignNameOf(Long id) {
+        return campaignRepository.findById(id).map(Campaign::getName).orElse("#" + id);
     }
 }

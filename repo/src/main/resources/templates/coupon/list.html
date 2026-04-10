@@ -16,6 +16,12 @@
            sec:authorize="hasAnyRole('ADMIN','OPERATIONS')">
             <i class="bi bi-plus-lg"></i> New Coupon
         </a>
+        <button type="button" class="btn btn-secondary disabled"
+                sec:authorize="!hasAnyRole('ADMIN','OPERATIONS')"
+                disabled
+                title="Creating a coupon requires the ADMIN or OPERATIONS role.">
+            <i class="bi bi-lock"></i> New Coupon
+        </button>
     </div>
 
     <div th:if="${#lists.isEmpty(coupons)}" class="empty-state">
@@ -62,11 +68,19 @@
                             &rarr;
                             <span th:text="${c.validUntil}">until</span>
                         </td>
-                        <td sec:authorize="hasAnyRole('ADMIN','OPERATIONS')">
-                            <a th:href="@{'/coupons/' + ${c.id} + '/edit'}"
+                        <td>
+                            <a sec:authorize="hasAnyRole('ADMIN','OPERATIONS')"
+                               th:href="@{'/coupons/' + ${c.id} + '/edit'}"
                                class="btn btn-sm btn-outline-primary">
                                 <i class="bi bi-pencil"></i>
                             </a>
+                            <button type="button"
+                                    sec:authorize="!hasAnyRole('ADMIN','OPERATIONS')"
+                                    class="btn btn-sm btn-outline-secondary disabled"
+                                    disabled
+                                    title="Editing coupons requires the ADMIN or OPERATIONS role.">
+                                <i class="bi bi-lock"></i>
+                            </button>
                         </td>
                     </tr>
                 </tbody>

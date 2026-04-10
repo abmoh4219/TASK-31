@@ -17,7 +17,13 @@ import java.time.LocalDateTime;
 /**
  * Anti-replay nonce + timestamp validation for privileged POST endpoints.
  *
- * Applies to: POST /admin/**  AND POST /approval/dual-approve/**.
+ * Applies to: POST /admin/**, POST /approval/dual-approve/**,
+ *             POST /approval/{id}/approve-first, POST /approval/{id}/approve-second.
+ *
+ * The two approve-first/second paths are the actual UI completion endpoints for the
+ * dual-approval workflow (R4 audit HIGH #1). They are protected without any form-
+ * encoded bypass — the browser fetches a nonce from {@code GET /approval/nonce} and
+ * submits the form with X-Nonce + X-Timestamp headers via JS (templates/approval/queue.html).
  * Required headers:
  *   X-Nonce      — caller-generated unique value (UUID is fine)
  *   X-Timestamp  — epoch milliseconds when the request was constructed
@@ -48,11 +54,17 @@ public class NonceValidationFilter extends OncePerRequestFilter {
             return;
         }
 
+        // Browser form submissions cannot easily set custom headers without going
+        // through fetch() (which loses RedirectAttributes flash messages). We accept
+        // the same nonce/timestamp from either headers (programmatic clients) OR form
+        // parameters _nonce / _timestamp (browser forms enriched by JS before submit).
         String nonce = request.getHeader("X-Nonce");
+        if (nonce == null || nonce.isBlank()) nonce = request.getParameter("_nonce");
         String timestampStr = request.getHeader("X-Timestamp");
+        if (timestampStr == null || timestampStr.isBlank()) timestampStr = request.getParameter("_timestamp");
 
         if (nonce == null || nonce.isBlank() || timestampStr == null || timestampStr.isBlank()) {
-            reject(response, "Missing X-Nonce or X-Timestamp header");
+            reject(response, "Missing X-Nonce or X-Timestamp (header or form field)");
             return;
         }
 
@@ -90,27 +102,32 @@ public class NonceValidationFilter extends OncePerRequestFilter {
     private boolean appliesTo(HttpServletRequest request) {
         if (!"POST".equalsIgnoreCase(request.getMethod())) return false;
         String uri = request.getRequestURI();
-        return uri.startsWith("/admin/") || uri.startsWith("/approval/dual-approve/");
+        // Sign-form endpoints issue the very nonce/signature this filter validates,
+        // so they must be excluded to avoid a chicken-and-egg loop. They are still
+        // gated by Spring Security role checks.
+        if (uri.equals("/admin/sign-form") || uri.equals("/approval/sign-form")) return false;
+        if (uri.startsWith("/admin/")) return true;
+        if (uri.startsWith("/approval/dual-approve/")) return true;
+        // R4 HIGH #1: cover the UI completion endpoints for dual approval. Pattern is
+        // /approval/{id}/approve-first or /approval/{id}/approve-second.
+        return uri.startsWith("/approval/")
+                && (uri.endsWith("/approve-first") || uri.endsWith("/approve-second"));
     }
 
     /**
-     * Narrow browser-form bypass. See SecurityDesignDecisions.md for the full rationale
-     * and the list of compensating controls.
+     * R4 HIGH #2 fix: the previous broad form-encoded bypass for /admin/** has been
+     * removed. Privileged browser POSTs now carry _nonce / _timestamp hidden fields
+     * injected by static/js/nonce-form.js, so the same anti-replay validation runs for
+     * both browser and API callers. RequestSigningFilter still keeps a form-encoded
+     * bypass because HMAC signing requires a shared secret that cannot live in the
+     * browser — see SecurityDesignDecisions.md for the threat-model rationale.
      *
-     * Only application/x-www-form-urlencoded is exempt. multipart/form-data is NOT:
-     * there are no admin file-upload forms, so any multipart POST to /admin/** must be
-     * a programmatic caller and must carry valid X-Nonce / X-Timestamp headers.
+     * The shouldNotFilter override therefore intentionally returns the OncePerRequestFilter
+     * default (false) — every request flows through doFilterInternal, which itself
+     * filters by HTTP method and URL via {@link #appliesTo(HttpServletRequest)}.
      */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String uri = request.getRequestURI();
-        if (uri != null && uri.startsWith("/admin/")) {
-            String contentType = request.getContentType();
-            if (contentType != null
-                    && contentType.toLowerCase().startsWith("application/x-www-form-urlencoded")) {
-                return true;
-            }
-        }
         return false;
     }
 

@@ -66,6 +66,11 @@
             }
         })();
     </script>
+    <!-- R4 HIGH #1 + #2: anti-replay nonce injection for privileged browser POSTs.
+         Auto-arms /admin/** and /approval/{id}/approve-* forms with _nonce/_timestamp
+         hidden fields so NonceValidationFilter can persist the nonce and reject replays.
+         See static/js/nonce-form.js and SecurityDesignDecisions.md for the rationale. -->
+    <script th:src="@{/js/nonce-form.js}"></script>
     <th:block layout:fragment="scripts"></th:block>
 </body>
 </html>

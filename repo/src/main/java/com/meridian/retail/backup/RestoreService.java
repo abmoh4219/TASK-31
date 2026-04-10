@@ -8,6 +8,7 @@ import com.meridian.retail.repository.BackupRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -133,6 +134,35 @@ public class RestoreService {
             long duration = System.currentTimeMillis() - start;
             log.error("Test-restore of backup {} failed", latest.getId(), e);
             return markAndReturn(latest, false, duration, "Exception: " + e.getMessage(), operator, ipAddress);
+        }
+    }
+
+    /**
+     * Weekly automated restore drill. Runs every Sunday at 03:00 server time and verifies
+     * the latest COMPLETE backup deserializes cleanly. Audited under operator "system" so
+     * QA can see the drill cadence in the audit log even with no human intervention.
+     *
+     * Requirement source: SPEC.md backup/recovery — weekly automated restore test in
+     * addition to nightly backup. Runs without touching the live DB (testRestoreLatest
+     * gunzips into a temp file, asserts content, deletes).
+     */
+    @Scheduled(cron = "0 0 3 ? * SUN")
+    public void weeklyRestoreDrill() {
+        log.info("Starting weekly restore drill");
+        try {
+            RestoreResult result = testRestoreLatest("system", "scheduler");
+            if (result.success()) {
+                log.info("Weekly restore drill OK: {} ({} ms)", result.message(), result.durationMs());
+            } else {
+                log.error("Weekly restore drill FAILED: {}", result.message());
+            }
+        } catch (Exception e) {
+            log.error("Weekly restore drill threw an exception", e);
+            auditLogService.log(AuditAction.BACKUP_RUN, "BackupRecord", null,
+                    null, Map.of("operation", "RESTORE_DRILL",
+                                 "success", false,
+                                 "error", String.valueOf(e.getMessage())),
+                    "system", "scheduler");
         }
     }
 

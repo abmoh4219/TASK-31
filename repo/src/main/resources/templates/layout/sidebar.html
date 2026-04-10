@@ -2,6 +2,13 @@
 <html xmlns:th="http://www.thymeleaf.org"
       xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <body>
+<!--
+  R4 audit MEDIUM #6 fix: every restricted nav item is rendered for ALL users.
+  Authorized users see a normal link; unauthorized users see a disabled span with a
+  tooltip explaining the role requirement. This makes "why blocked" feedback consistent
+  with the action-button pattern used in templates/campaign/list.html and other pages,
+  rather than silently hiding sections via sec:authorize.
+-->
 <aside th:fragment="sidebar" class="app-sidebar">
     <div class="brand">
         <h1>Retail Campaign</h1>
@@ -10,53 +17,112 @@
     <nav>
         <div class="nav-section">Workspace</div>
 
+        <!-- Admin Dashboard — ADMIN only -->
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/dashboard}">
             <i class="bi bi-grid-fill"></i> Admin Dashboard
         </a>
+        <span sec:authorize="!hasRole('ADMIN')" class="nav-disabled"
+              title="Admin Dashboard requires the ADMIN role.">
+            <i class="bi bi-lock"></i> Admin Dashboard
+        </span>
+
+        <!-- Campaigns — every authenticated role -->
         <a sec:authorize="hasAnyRole('OPERATIONS','REVIEWER','CUSTOMER_SERVICE','ADMIN','FINANCE')"
            th:href="@{/campaigns}">
             <i class="bi bi-megaphone"></i> Campaigns
         </a>
+
+        <!-- Coupons — every authenticated role -->
         <a sec:authorize="hasAnyRole('OPERATIONS','REVIEWER','CUSTOMER_SERVICE','ADMIN','FINANCE')"
            th:href="@{/coupons}">
             <i class="bi bi-ticket-perforated"></i> Coupons
         </a>
+
+        <!-- Coupon Lookup — CS + ADMIN -->
         <a sec:authorize="hasAnyRole('CUSTOMER_SERVICE','ADMIN')" th:href="@{/cs/lookup}">
             <i class="bi bi-search"></i> Coupon Lookup
         </a>
+        <span sec:authorize="!hasAnyRole('CUSTOMER_SERVICE','ADMIN')" class="nav-disabled"
+              title="Coupon Lookup requires the CUSTOMER_SERVICE or ADMIN role.">
+            <i class="bi bi-lock"></i> Coupon Lookup
+        </span>
+
+        <!-- Upload Files — OPS + ADMIN -->
         <a sec:authorize="hasAnyRole('OPERATIONS','ADMIN')" th:href="@{/upload}">
             <i class="bi bi-cloud-upload"></i> Upload Files
         </a>
+        <span sec:authorize="!hasAnyRole('OPERATIONS','ADMIN')" class="nav-disabled"
+              title="Upload Files requires the OPERATIONS or ADMIN role.">
+            <i class="bi bi-lock"></i> Upload Files
+        </span>
+
+        <!-- Content Integrity — OPS, REVIEWER, ADMIN -->
         <a sec:authorize="hasAnyRole('OPERATIONS','REVIEWER','ADMIN')" th:href="@{/content}">
             <i class="bi bi-files"></i> Content Integrity
         </a>
+        <span sec:authorize="!hasAnyRole('OPERATIONS','REVIEWER','ADMIN')" class="nav-disabled"
+              title="Content Integrity requires the OPERATIONS, REVIEWER, or ADMIN role.">
+            <i class="bi bi-lock"></i> Content Integrity
+        </span>
 
-        <div class="nav-section" sec:authorize="hasAnyRole('REVIEWER','ADMIN')">Review</div>
+        <div class="nav-section">Review</div>
         <a sec:authorize="hasAnyRole('REVIEWER','ADMIN')" th:href="@{/approval/queue}">
             <i class="bi bi-check2-square"></i> Approval Queue
         </a>
+        <span sec:authorize="!hasAnyRole('REVIEWER','ADMIN')" class="nav-disabled"
+              title="Approval Queue requires the REVIEWER or ADMIN role.">
+            <i class="bi bi-lock"></i> Approval Queue
+        </span>
 
-        <div class="nav-section" sec:authorize="hasAnyRole('FINANCE','ADMIN')">Analytics</div>
+        <div class="nav-section">Analytics</div>
         <a sec:authorize="hasAnyRole('FINANCE','ADMIN','OPERATIONS')" th:href="@{/analytics/dashboard}">
             <i class="bi bi-bar-chart"></i> Analytics
         </a>
+        <span sec:authorize="!hasAnyRole('FINANCE','ADMIN','OPERATIONS')" class="nav-disabled"
+              title="Analytics requires the FINANCE, ADMIN, or OPERATIONS role.">
+            <i class="bi bi-lock"></i> Analytics
+        </span>
 
-        <div class="nav-section" sec:authorize="hasRole('ADMIN')">Administration</div>
+        <div class="nav-section">Administration</div>
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/users}">
             <i class="bi bi-people"></i> Users
         </a>
+        <span sec:authorize="!hasRole('ADMIN')" class="nav-disabled"
+              title="User management requires the ADMIN role.">
+            <i class="bi bi-lock"></i> Users
+        </span>
+
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/role-changes}">
             <i class="bi bi-person-gear"></i> Role Changes
         </a>
+        <span sec:authorize="!hasRole('ADMIN')" class="nav-disabled"
+              title="Role Changes requires the ADMIN role (dual-approval workflow).">
+            <i class="bi bi-lock"></i> Role Changes
+        </span>
+
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/audit-log}">
             <i class="bi bi-shield-lock"></i> Audit Log
         </a>
+        <span sec:authorize="!hasRole('ADMIN')" class="nav-disabled"
+              title="Audit Log access requires the ADMIN role — log views are themselves sensitive.">
+            <i class="bi bi-lock"></i> Audit Log
+        </span>
+
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/anomaly-alerts}">
             <i class="bi bi-exclamation-triangle"></i> Anomaly Alerts
         </a>
+        <span sec:authorize="!hasRole('ADMIN')" class="nav-disabled"
+              title="Anomaly Alerts requires the ADMIN role.">
+            <i class="bi bi-lock"></i> Anomaly Alerts
+        </span>
+
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/backup}">
             <i class="bi bi-hdd"></i> Backups
         </a>
+        <span sec:authorize="!hasRole('ADMIN')" class="nav-disabled"
+              title="Backups requires the ADMIN role.">
+            <i class="bi bi-lock"></i> Backups
+        </span>
     </nav>
 </aside>
 </body>

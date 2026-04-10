@@ -34,7 +34,13 @@ public class AnalyticsService {
 
     public CouponStats getCouponStats(String storeId, LocalDateTime from, LocalDateTime to) {
         long redemptionCount = redemptionRepository.countRedemptions(storeId, from, to);
-        long issuance = couponRepository.findAll().stream().mapToInt(c -> c.getMaxUses()).sum();
+        // Issuance respects the same store + date filters as redemption: sum of coupon
+        // max_uses on coupons whose parent campaign matches storeId and whose validity
+        // window overlaps the requested date range. max_uses is a documented proxy for
+        // distribution capacity since the schema has no per-issuance event row.
+        java.time.LocalDate fromDate = from == null ? null : from.toLocalDate();
+        java.time.LocalDate toDate = to == null ? null : to.toLocalDate();
+        long issuance = couponRepository.sumMaxUsesByCampaignFilters(storeId, fromDate, toDate);
         return new CouponStats(issuance, redemptionCount);
     }
 

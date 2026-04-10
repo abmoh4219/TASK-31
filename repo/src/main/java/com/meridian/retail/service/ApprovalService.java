@@ -31,6 +31,7 @@ public class ApprovalService {
     private final CampaignRepository campaignRepository;
     private final DualApprovalService dualApprovalService;
     private final AuditLogService auditLogService;
+    private final CouponService couponService;
 
     /**
      * Queue view for reviewers: both single-approval PENDING items AND HIGH-risk items
@@ -106,6 +107,11 @@ public class ApprovalService {
         if (q.getRequestedBy() != null && q.getRequestedBy().equalsIgnoreCase(reviewerUsername)) {
             throw new SameApproverException("A reviewer cannot approve a campaign they themselves submitted");
         }
+        // Pre-approval validation: refuse if any coupon attached to this campaign
+        // conflicts with already-live coupons (non-stackable + same store, or shared
+        // mutual_exclusion_group). Enforced in the service so the rule applies to every
+        // approval path, not just the UI.
+        rejectIfStackingConflicts(q.getCampaignId());
         // This will throw SameApproverException if the two approvers match (two-eyes rule)
         // and CampaignValidationException if the first approval has not yet been recorded.
         dualApprovalService.recordSecondForQueue(q.getId(), reviewerUsername, ipAddress);
@@ -148,6 +154,9 @@ public class ApprovalService {
             throw new SameApproverException("A reviewer cannot approve a campaign they themselves submitted");
         }
 
+        // Block approval if any of the campaign's coupons conflict with live coupons.
+        rejectIfStackingConflicts(q.getCampaignId());
+
         if (q.getRiskLevel() == RiskLevel.HIGH) {
             // For HIGH risk we require dual approval to be COMPLETE before flipping the status.
             // IMPORTANT: a single reviewer hitting "approve" must NEVER satisfy this —
@@ -179,6 +188,19 @@ public class ApprovalService {
         auditLogService.log(AuditAction.APPROVAL_APPROVED, "ApprovalQueue", saved.getId(),
                 null, saved, reviewerUsername, ipAddress);
         return saved;
+    }
+
+    /**
+     * Throws CampaignValidationException with a human-readable message if any of the
+     * campaign's coupons conflict with live coupons. Used by every "approve" path.
+     */
+    private void rejectIfStackingConflicts(Long campaignId) {
+        List<String> conflicts = couponService.findApprovalStackingConflicts(campaignId);
+        if (!conflicts.isEmpty()) {
+            String summary = "Approval blocked by coupon stacking conflict: " + String.join("; ", conflicts);
+            log.warn("Stacking validation failure for campaign {}: {}", campaignId, summary);
+            throw new CampaignValidationException(summary);
+        }
     }
 
     @Transactional

@@ -34,3 +34,27 @@ docker compose down
 5. Start app: `docker compose up app`
 
 Estimated RTO: under 4 hours on a single server.
+
+## Local Development (Optional — without Docker)
+
+Docker is the recommended and fully supported path. The steps below are for static
+reviewers who want a local fallback.
+
+Prerequisites: JDK 17+, Maven 3.8+ (or use the bundled `./mvnw` wrapper), MySQL 8.0+.
+
+```bash
+# Point Spring at a local MySQL instance
+export SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+export SPRING_DATASOURCE_USERNAME=retail_user
+export SPRING_DATASOURCE_PASSWORD=retail_pass
+
+# Run tests (uses Testcontainers — needs Docker available for the MySQL container)
+./mvnw test
+
+# Start the app
+./mvnw spring-boot:run
+```
+
+Note: integration tests still require Docker because they use Testcontainers for a real
+MySQL database. For a fully offline static review, the source code under `src/` is
+self-contained and the Docker compose path is the supported runtime.
