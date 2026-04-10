@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Sign in — Retail Campaign Governance</title>
+    <link rel="stylesheet" th:href="@{/vendor/inter/inter.css}"/>
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap/css/bootstrap.min.css}"/>
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap-icons/bootstrap-icons.min.css}"/>
+    <link rel="stylesheet" th:href="@{/css/custom.css}"/>
+</head>
+<body>
+<div class="login-shell">
+    <div class="login-card">
+        <div class="text-center mb-4">
+            <i class="bi bi-shop" style="font-size: 40px; color: var(--primary);"></i>
+            <h1 class="mt-2">Retail Campaign Governance</h1>
+            <div class="login-subtitle">Sign in to continue to the back office</div>
+        </div>
+
+        <div th:if="${errorMessage}" class="alert alert-danger" role="alert">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span th:text="${errorMessage}">Error</span>
+        </div>
+        <div th:if="${successMessage}" class="alert alert-success" role="alert">
+            <i class="bi bi-check-circle"></i>
+            <span th:text="${successMessage}">Success</span>
+        </div>
+
+        <form th:action="@{/login}" method="post" autocomplete="off">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" id="username" name="username" class="form-control"
+                       required autofocus autocomplete="username"/>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" name="password" class="form-control"
+                       required autocomplete="current-password"/>
+            </div>
+
+            <div th:if="${captchaRequired}" class="mb-3">
+                <label for="captcha" class="form-label">
+                    Verify you're human
+                    <small class="text-muted d-block" style="font-weight: 400;">
+                        Type the characters from the image below.
+                    </small>
+                </label>
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <img th:src="@{/captcha/image}" alt="CAPTCHA" id="captcha-image"
+                         style="border:1px solid var(--border); border-radius:6px;"/>
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            onclick="document.getElementById('captcha-image').src='/captcha/image?'+Date.now();">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+                <input type="text" id="captcha" name="captcha" class="form-control"
+                       maxlength="6" autocomplete="off"/>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mt-2">
+                <i class="bi bi-box-arrow-in-right"></i> Sign in
+            </button>
+        </form>
+
+        <details class="mt-4">
+            <summary class="text-muted" style="cursor:pointer; font-size:13px;">
+                Why am I locked out?
+            </summary>
+            <div class="text-muted mt-2" style="font-size:12px; line-height:1.6;">
+                <p class="mb-1">Accounts lock for 15 minutes after 5 failed sign-in attempts.</p>
+                <p class="mb-1">Networks lock for 1 hour after 20 failed attempts from any account.</p>
+                <p class="mb-0">CAPTCHA appears after 3 failed attempts to deter automated guessing.</p>
+            </div>
+        </details>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Approval Queue</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 style="margin-bottom:4px;">Approval Queue</h2>
+            <p class="text-muted mb-0">Review pending campaign submissions.</p>
+        </div>
+        <div>
+            <span class="kpi-card" style="display:inline-block; padding:14px 20px;">
+                <span class="kpi-label">Pending</span>
+                <div class="kpi-value" th:text="${pendingCount}">0</div>
+            </span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(queueItems)}" class="empty-state">
+                <div class="empty-icon"><i class="bi bi-check2-circle"></i></div>
+                <h3>Queue is empty</h3>
+                <p>Nothing to review right now. Take a coffee break.</p>
+            </div>
+            <table th:if="${not #lists.isEmpty(queueItems)}" class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Campaign ID</th>
+                        <th>Requested by</th>
+                        <th>Risk</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="q : ${queueItems}">
+                        <td><strong th:text="${q.campaignId}">id</strong></td>
+                        <td th:text="${q.requestedBy}">user</td>
+                        <td>
+                            <span class="status-badge"
+                                  th:classappend="'status-' + ${#strings.toLowerCase(q.riskLevel)}"
+                                  th:text="${q.riskLevel}">RISK</span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-pending" th:text="${q.status}">STATUS</span>
+                        </td>
+                        <td th:text="${#temporals.format(q.createdAt, 'yyyy-MM-dd HH:mm')}">date</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

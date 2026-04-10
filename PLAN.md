@@ -77,26 +77,26 @@
 > QA will test login in Docker — it must actually work, not just compile.
 > Complete all tasks continuously, then pause. Wait for "proceed".
 
-- [ ] 2.1 Create SecurityConfig.java — exact implementation from CLAUDE.md spec, with all 3 custom filters registered in correct order
-- [ ] 2.2 Create UserDetailsServiceImpl.java: implements UserDetailsService, loads user from DB by username, returns Spring Security User with role as GrantedAuthority ("ROLE_ADMIN" etc.), returns disabled user if is_active=false
-- [ ] 2.3 Create PasswordEncoder @Bean in SecurityConfig: BCryptPasswordEncoder(strength=12)
-- [ ] 2.4 Create AccountLockoutService.java — exact implementation from CLAUDE.md spec with both account and IP lockout queries
-- [ ] 2.5 Create CustomAuthenticationFailureHandler.java: call accountLockoutService.trackFailedAttempt(), count failures for account, if count >= 3 set session attribute "captchaRequired"=true, redirect to /login?error (or /login?locked if now locked, or /login?ipblocked if IP blocked)
-- [ ] 2.6 Create CustomAuthenticationSuccessHandler.java: call accountLockoutService.resetAttempts(), redirect by role: ADMIN→/admin/dashboard, REVIEWER→/approval/queue, FINANCE→/analytics/dashboard, OPERATIONS→/campaigns, CUSTOMER_SERVICE→/campaigns (read-only view)
-- [ ] 2.7 Create LocalCaptchaService.java: generateImage(session) creates 200x60 BufferedImage with 6-char random alphanumeric, font size 30-36px, ±15 degree rotation per char, 5 random lines as noise, stores plaintext answer in session under "CAPTCHA_ANSWER" key, validateAnswer(session, input) compares case-insensitively
-- [ ] 2.8 Create CaptchaController.java: GET /captcha/image — returns BufferedImage as image/png (uses ImageIO.write to response output stream), POST /captcha/validate — returns Thymeleaf fragment with result for HTMX
-- [ ] 2.9 Create RateLimitFilter.java — exact implementation from CLAUDE.md spec with Bucket4j
-- [ ] 2.10 Create NonceValidationFilter.java: applies to POST /admin/** and POST /approval/dual-approve/**, reads X-Nonce + X-Timestamp headers, validates timestamp within ±5min, queries usedNonceRepository.existsByNonce(nonce), if exists → 400, if valid → save UsedNonce + continue chain
-- [ ] 2.11 Create RequestSigningFilter.java: applies to POST /admin/**, reads X-Signature header, computes expected HMAC-SHA256(method+"\n"+path+"\n"+timestamp+"\n"+SHA256(body)) using signingSecret from @Value, compares — 403 if mismatch
-- [ ] 2.12 Create PasswordValidationService.java: validate(password) → checks length ≥ 12, has uppercase, lowercase, digit, special char (Pattern.compile) → throws PasswordComplexityException("Password must be at least 12 characters with uppercase, lowercase, digit, and special character") if fails
-- [ ] 2.13 Create XssInputSanitizer.java: sanitize(input) → uses Jsoup.clean(input, Safelist.none()) to strip all HTML/scripts. Static utility method, called at start of every service method that accepts user text.
-- [ ] 2.14 Create UsedNonceCleanupTask.java: @Scheduled(cron="0 0 * * * *") deletes usedNonces where expires_at < NOW()
-- [ ] 2.15 Create LoginController.java: GET /login — checks session for "captchaRequired" attribute, adds to model, renders templates/auth/login.html; also handles ?error, ?locked, ?logout, ?ipblocked query params with appropriate messages
-- [ ] 2.16 Create templates/auth/login.html: full Bootstrap 5 centered card login form, CSRF token (th:action="@{/login}" includes it automatically), username/password fields, error message area (th:if="${param.error}"), locked message (th:if="${param.locked}"), CAPTCHA section (th:if="${captchaRequired}") showing /captcha/image + input field, "Why am I locked out?" expandable help text, modern eye-catching design matching CLAUDE.md color palette
-- [ ] 2.17 Create DashboardController.java: GET /admin/dashboard (ADMIN), GET /approval/queue stub (REVIEWER), GET /campaigns stub (OPERATIONS, CS), GET /analytics/dashboard stub (FINANCE) — returns role-specific dashboard templates with real data from DB
-- [ ] 2.18 Write unit tests: AccountLockoutServiceTest — lockout after 5 attempts (mock repo returning count 5), no lockout at 4, IP block after 20, PasswordValidationServiceTest — valid/invalid cases
-- [ ] 2.19 Write security integration tests (SecurityIntegrationTest.java with @SpringBootTest + Testcontainers): GET /campaigns without login → 302 redirect to /login, POST /login with wrong password → 302 /login?error, POST /campaigns without CSRF → 403, OPS user GET /admin/dashboard → 403
-- [ ] 2.20 Verify end-to-end in compile: ./mvnw compile succeeds, all security classes compile with zero errors
+- [x] 2.1 Create SecurityConfig.java — exact implementation from CLAUDE.md spec, with all 3 custom filters registered in correct order
+- [x] 2.2 Create UserDetailsServiceImpl.java: implements UserDetailsService, loads user from DB by username, returns Spring Security User with role as GrantedAuthority ("ROLE_ADMIN" etc.), returns disabled user if is_active=false
+- [x] 2.3 Create PasswordEncoder @Bean in SecurityConfig: BCryptPasswordEncoder(strength=12)
+- [x] 2.4 Create AccountLockoutService.java — exact implementation from CLAUDE.md spec with both account and IP lockout queries
+- [x] 2.5 Create CustomAuthenticationFailureHandler.java: call accountLockoutService.trackFailedAttempt(), count failures for account, if count >= 3 set session attribute "captchaRequired"=true, redirect to /login?error (or /login?locked if now locked, or /login?ipblocked if IP blocked)
+- [x] 2.6 Create CustomAuthenticationSuccessHandler.java: call accountLockoutService.resetAttempts(), redirect by role: ADMIN→/admin/dashboard, REVIEWER→/approval/queue, FINANCE→/analytics/dashboard, OPERATIONS→/campaigns, CUSTOMER_SERVICE→/campaigns (read-only view)
+- [x] 2.7 Create LocalCaptchaService.java: generateImage(session) creates 200x60 BufferedImage with 6-char random alphanumeric, font size 30-36px, ±15 degree rotation per char, 5 random lines as noise, stores plaintext answer in session under "CAPTCHA_ANSWER" key, validateAnswer(session, input) compares case-insensitively
+- [x] 2.8 Create CaptchaController.java: GET /captcha/image — returns BufferedImage as image/png (uses ImageIO.write to response output stream), POST /captcha/validate — returns Thymeleaf fragment with result for HTMX
+- [x] 2.9 Create RateLimitFilter.java — exact implementation from CLAUDE.md spec with Bucket4j
+- [x] 2.10 Create NonceValidationFilter.java: applies to POST /admin/** and POST /approval/dual-approve/**, reads X-Nonce + X-Timestamp headers, validates timestamp within ±5min, queries usedNonceRepository.existsByNonce(nonce), if exists → 400, if valid → save UsedNonce + continue chain
+- [x] 2.11 Create RequestSigningFilter.java: applies to POST /admin/**, reads X-Signature header, computes expected HMAC-SHA256(method+"\n"+path+"\n"+timestamp+"\n"+SHA256(body)) using signingSecret from @Value, compares — 403 if mismatch
+- [x] 2.12 Create PasswordValidationService.java: validate(password) → checks length ≥ 12, has uppercase, lowercase, digit, special char (Pattern.compile) → throws PasswordComplexityException("Password must be at least 12 characters with uppercase, lowercase, digit, and special character") if fails
+- [x] 2.13 Create XssInputSanitizer.java: sanitize(input) → uses Jsoup.clean(input, Safelist.none()) to strip all HTML/scripts. Static utility method, called at start of every service method that accepts user text.
+- [x] 2.14 Create UsedNonceCleanupTask.java: @Scheduled(cron="0 0 * * * *") deletes usedNonces where expires_at < NOW()
+- [x] 2.15 Create LoginController.java: GET /login — checks session for "captchaRequired" attribute, adds to model, renders templates/auth/login.html; also handles ?error, ?locked, ?logout, ?ipblocked query params with appropriate messages
+- [x] 2.16 Create templates/auth/login.html: full Bootstrap 5 centered card login form, CSRF token (th:action="@{/login}" includes it automatically), username/password fields, error message area (th:if="${param.error}"), locked message (th:if="${param.locked}"), CAPTCHA section (th:if="${captchaRequired}") showing /captcha/image + input field, "Why am I locked out?" expandable help text, modern eye-catching design matching CLAUDE.md color palette
+- [x] 2.17 Create DashboardController.java: GET /admin/dashboard (ADMIN), GET /approval/queue stub (REVIEWER), GET /campaigns stub (OPERATIONS, CS), GET /analytics/dashboard stub (FINANCE) — returns role-specific dashboard templates with real data from DB
+- [x] 2.18 Write unit tests: AccountLockoutServiceTest — lockout after 5 attempts (mock repo returning count 5), no lockout at 4, IP block after 20, PasswordValidationServiceTest — valid/invalid cases
+- [x] 2.19 Write security integration tests (SecurityIntegrationTest.java with @SpringBootTest + Testcontainers): GET /campaigns without login → 302 redirect to /login, POST /login with wrong password → 302 /login?error, POST /campaigns without CSRF → 403, OPS user GET /admin/dashboard → 403
+- [x] 2.20 Verify end-to-end in compile: ./mvnw compile succeeds, all security classes compile with zero errors
 
 **Phase 2 checkpoint: Login page renders. All 5 users can log in with correct credentials. Wrong password shows error. CSRF protection active.**
 

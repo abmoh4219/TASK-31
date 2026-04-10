@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Admin Dashboard</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 style="margin-bottom:4px;">Welcome back, Administrator</h2>
+            <p class="text-muted mb-0">Here's a snapshot of the system right now.</p>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Active Users</div>
+                <div class="kpi-value" th:text="${activeUsers}">0</div>
+                <div class="kpi-trend">
+                    <i class="bi bi-people"></i>
+                    <span th:text="${'of ' + totalUsers + ' total'}">of 0 total</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Active Campaigns</div>
+                <div class="kpi-value" th:text="${activeCampaigns}">0</div>
+                <div class="kpi-trend">
+                    <i class="bi bi-megaphone"></i>
+                    <span th:text="${draftCampaigns + ' drafts in progress'}">0 drafts</span>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Pending Approvals</div>
+                <div class="kpi-value" th:text="${pendingApprovals}">0</div>
+                <div class="kpi-trend">
+                    <i class="bi bi-check2-square"></i> awaiting reviewer
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card">
+                <div class="kpi-label">Anomaly Alerts</div>
+                <div class="kpi-value" th:text="${unacknowledgedAlerts}">0</div>
+                <div class="kpi-trend">
+                    <i class="bi bi-exclamation-triangle"></i> unacknowledged
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">Quick Actions</div>
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <a th:href="@{/admin/users}" class="btn btn-outline-primary">
+                            <i class="bi bi-people"></i> Manage Users
+                        </a>
+                        <a th:href="@{/campaigns}" class="btn btn-outline-primary">
+                            <i class="bi bi-megaphone"></i> View Campaigns
+                        </a>
+                        <a th:href="@{/admin/audit-log}" class="btn btn-outline-primary">
+                            <i class="bi bi-shield-lock"></i> Audit Log
+                        </a>
+                        <a th:href="@{/admin/anomaly-alerts}" class="btn btn-outline-primary">
+                            <i class="bi bi-exclamation-triangle"></i> Anomaly Alerts
+                        </a>
+                        <a th:href="@{/admin/backup}" class="btn btn-outline-primary">
+                            <i class="bi bi-hdd"></i> Backups
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">Last Backup</div>
+                <div class="card-body">
+                    <div th:if="${lastBackup != null}">
+                        <div class="status-badge status-active">COMPLETE</div>
+                        <p class="text-muted mt-2 mb-1" th:text="${lastBackup.filename}">file</p>
+                        <small class="text-muted" th:text="${#temporals.format(lastBackup.createdAt, 'yyyy-MM-dd HH:mm')}">date</small>
+                    </div>
+                    <div th:if="${lastBackup == null}" class="text-muted">
+                        <i class="bi bi-info-circle"></i> No backups yet.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

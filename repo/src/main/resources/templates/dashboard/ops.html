@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Campaigns</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h2 style="margin-bottom:4px;">Campaigns</h2>
+            <p class="text-muted mb-0">Browse and manage promotions across stores.</p>
+        </div>
+        <div sec:authorize="hasAnyRole('OPERATIONS','ADMIN')">
+            <a th:href="@{/campaigns/new}" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> New Campaign
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(campaigns)}" class="empty-state">
+                <div class="empty-icon"><i class="bi bi-megaphone"></i></div>
+                <h3>No campaigns yet</h3>
+                <p>Create your first campaign to get started.</p>
+                <a sec:authorize="hasAnyRole('OPERATIONS','ADMIN')" th:href="@{/campaigns/new}"
+                   class="btn btn-primary">Create campaign</a>
+            </div>
+            <table th:if="${not #lists.isEmpty(campaigns)}" class="table mb-0">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Store</th>
+                        <th>Period</th>
+                        <th>Created by</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="c : ${campaigns}">
+                        <td><strong th:text="${c.name}">name</strong></td>
+                        <td><span class="status-badge status-draft" th:text="${c.type}">TYPE</span></td>
+                        <td>
+                            <span class="status-badge"
+                                  th:classappend="'status-' + ${#strings.toLowerCase(#strings.replace(c.status, '_', '-'))}"
+                                  th:text="${c.status}">STATUS</span>
+                        </td>
+                        <td th:text="${c.storeId}">STORE</td>
+                        <td>
+                            <small class="text-muted"
+                                   th:text="${c.startDate} + ' → ' + ${c.endDate}">dates</small>
+                        </td>
+                        <td th:text="${c.createdBy}">user</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>
