@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${pageTitle != null ? pageTitle + ' — Retail Campaign Governance' : 'Retail Campaign Governance'}">Retail Campaign Governance</title>
+    <meta name="_csrf" th:content="${_csrf != null ? _csrf.token : ''}"/>
+    <meta name="_csrf_header" th:content="${_csrf != null ? _csrf.headerName : ''}"/>
+    <link rel="stylesheet" th:href="@{/vendor/inter/inter.css}"/>
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap/css/bootstrap.min.css}"/>
+    <link rel="stylesheet" th:href="@{/vendor/bootstrap-icons/bootstrap-icons.min.css}"/>
+    <link rel="stylesheet" th:href="@{/css/custom.css}"/>
+</head>
+<body>
+    <!-- Sidebar (role-aware via sec:authorize) -->
+    <aside class="app-sidebar" th:replace="~{layout/sidebar :: sidebar}"></aside>
+
+    <!-- Main content area -->
+    <div class="app-main">
+        <header class="app-header">
+            <div class="breadcrumbs">
+                <i class="bi bi-house-door"></i>
+                <span th:text="${breadcrumb != null ? breadcrumb : 'Dashboard'}">Dashboard</span>
+            </div>
+            <div class="user-info" sec:authorize="isAuthenticated()">
+                <span sec:authentication="name" class="text-muted">user</span>
+                <span class="role-badge"
+                      th:classappend="'role-' + ${#strings.toLowerCase(#strings.replace(#authentication.authorities[0].authority, 'ROLE_', ''))}"
+                      th:text="${#strings.replace(#authentication.authorities[0].authority, 'ROLE_', '')}">ROLE</span>
+                <form th:action="@{/logout}" method="post" class="d-inline m-0">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                </form>
+            </div>
+        </header>
+
+        <main class="app-content">
+            <!-- Flash messages -->
+            <div class="flash-area" th:if="${successMessage != null or errorMessage != null}">
+                <div class="alert alert-success" th:if="${successMessage != null}" th:text="${successMessage}">Success</div>
+                <div class="alert alert-danger" th:if="${errorMessage != null}" th:text="${errorMessage}">Error</div>
+            </div>
+
+            <!-- Page content slot -->
+            <div layout:fragment="content">
+                <p>Default content placeholder.</p>
+            </div>
+        </main>
+    </div>
+
+    <script th:src="@{/vendor/bootstrap/js/bootstrap.bundle.min.js}"></script>
+    <script th:src="@{/vendor/htmx/htmx.min.js}"></script>
+    <script>
+        // Wire HTMX to send the CSRF header on every request
+        (function() {
+            var token = document.querySelector('meta[name="_csrf"]');
+            var header = document.querySelector('meta[name="_csrf_header"]');
+            if (token && header && token.content && header.content) {
+                document.body.addEventListener('htmx:configRequest', function(evt) {
+                    evt.detail.headers[header.content] = token.content;
+                });
+            }
+        })();
+    </script>
+    <th:block layout:fragment="scripts"></th:block>
+</body>
+</html>

@@ -11,12 +11,12 @@
 > Goal: Docker, Maven wrapper, Spring Boot scaffold, Bootstrap 5 base layout, .gitignore, README
 > Complete all tasks continuously, then pause. Wait for "proceed".
 
-- [ ] 0.1 Create repo/.gitignore with content from CLAUDE.md — note: no .env or .env.* entries since this project has no .env file and requires zero manual configuration
-- [ ] 0.2 Create repo/README.md (minimal, exact format from CLAUDE.md)
-- [ ] 0.3 Create repo/pom.xml — Spring Boot 3.2.x parent, Java 17, all dependencies from CLAUDE.md. Include maven-wrapper-plugin so ./mvnw works inside Docker.
-- [ ] 0.4 Generate Maven wrapper: create .mvn/wrapper/maven-wrapper.properties pointing to Maven 3.9.x, create mvnw shell script (chmod +x)
-- [ ] 0.5 Create repo/src/main/java/com/meridian/retail/RetailCampaignApplication.java (@SpringBootApplication, main method)
-- [ ] 0.6 Create repo/src/main/resources/application.yml with ALL values hardcoded (no ${ENV_VAR} references — QA must not configure anything):
+- [x] 0.1 Create repo/.gitignore with content from CLAUDE.md — note: no .env or .env.* entries since this project has no .env file and requires zero manual configuration
+- [x] 0.2 Create repo/README.md (minimal, exact format from CLAUDE.md)
+- [x] 0.3 Create repo/pom.xml — Spring Boot 3.2.x parent, Java 17, all dependencies from CLAUDE.md. Include maven-wrapper-plugin so ./mvnw works inside Docker.
+- [x] 0.4 Generate Maven wrapper: create .mvn/wrapper/maven-wrapper.properties pointing to Maven 3.9.x, create mvnw shell script (chmod +x)
+- [x] 0.5 Create repo/src/main/java/com/meridian/retail/RetailCampaignApplication.java (@SpringBootApplication, main method)
+- [x] 0.6 Create repo/src/main/resources/application.yml with ALL values hardcoded (no ${ENV_VAR} references — QA must not configure anything):
        spring.datasource.url=jdbc:mysql://localhost:3306/retail_campaign (overridden by docker-compose env),
        spring.datasource.username=retail_user, spring.datasource.password=retail_pass,
        spring.jpa.hibernate.ddl-auto=validate, spring.flyway.enabled=true,
@@ -27,21 +27,21 @@
        app.signing.secret=retail-campaign-hmac-signing-key!! (hardcoded — same as docker-compose),
        app.rate-limit.standard=60, app.rate-limit.export=10,
        app.temp-link.expiry-minutes=10, app.backup.retention-days=14
-- [ ] 0.7 Create repo/src/main/resources/application-docker.yml: datasource URL pointing to mysql service, production logging level
-- [ ] 0.8 Create repo/src/main/resources/application-test.yml: Testcontainers auto-datasource config (spring.datasource.url=, spring.jpa.hibernate.ddl-auto=create — ONLY for test profile)
-- [ ] 0.9 Download Bootstrap 5.3 CSS/JS, HTMX 1.9, Chart.js, Inter font to repo/src/main/resources/static/vendor/ — no CDN references anywhere (offline-first requirement from SPEC.md)
-- [ ] 0.10 Create repo/src/main/resources/static/css/custom.css — full custom stylesheet using CSS variables for the color palette from CLAUDE.md (dark sidebar, card styles, role badges, form styles, empty states)
-- [ ] 0.11 Create base Thymeleaf layout: templates/layout/base.html — dark sidebar navigation (240px, fixed), top header (breadcrumbs + username + role badge + logout button), main content area, flash message slot, HTMX attributes, Bootstrap 5 and HTMX loaded from /vendor/
-- [ ] 0.12 Create templates/layout/sidebar.html fragment — role-based menu items using sec:authorize, active state detection, icons (Bootstrap Icons or inline SVG)
-- [ ] 0.13 Create templates/error/403.html, 404.html, 500.html — styled error pages with "why blocked" message for 403, navigation back to dashboard
-- [ ] 0.14 Create WebConfig.java (@Configuration): static resource handlers, multipart config (50MB max file size, 200MB max request size), HTMX response header helper
-- [ ] 0.15 Create repo/Dockerfile — eclipse-temurin:17-jdk-alpine builder stage (./mvnw package -DskipTests), eclipse-temurin:17-jre-alpine runtime stage, COPY target/*.jar app.jar, ENTRYPOINT
-- [ ] 0.16 Create repo/Dockerfile.test — maven:3.9-eclipse-temurin-17-alpine, COPY pom.xml + src, RUN chmod +x run_tests.sh, CMD ["sh", "run_tests.sh"]
-- [ ] 0.17 Create repo/docker-compose.yml — exact content from CLAUDE.md (mysql + app services, healthcheck, volumes). CRITICAL: All environment variable values must be hardcoded strings — no ${VAR} syntax anywhere. No .env file. QA runs docker compose up --build with zero configuration.
-- [ ] 0.18 Create repo/docker-compose.test.yml — mysql-test service (port 3307) + test-runner service that depends on mysql-test healthy
-- [ ] 0.19 Create repo/run_tests.sh — exact content from CLAUDE.md, chmod +x
-- [ ] 0.20 Create HealthController.java: GET /actuator/health returns 200 with {status: UP} — no auth required
-- [ ] 0.21 Verify: ./mvnw compile --no-transfer-progress succeeds with zero errors. Fix all compile errors before marking done.
+- [x] 0.7 Create repo/src/main/resources/application-docker.yml: datasource URL pointing to mysql service, production logging level
+- [x] 0.8 Create repo/src/main/resources/application-test.yml: Testcontainers auto-datasource config (spring.datasource.url=, spring.jpa.hibernate.ddl-auto=create — ONLY for test profile)
+- [x] 0.9 Download Bootstrap 5.3 CSS/JS, HTMX 1.9, Chart.js, Inter font to repo/src/main/resources/static/vendor/ — no CDN references anywhere (offline-first requirement from SPEC.md)
+- [x] 0.10 Create repo/src/main/resources/static/css/custom.css — full custom stylesheet using CSS variables for the color palette from CLAUDE.md (dark sidebar, card styles, role badges, form styles, empty states)
+- [x] 0.11 Create base Thymeleaf layout: templates/layout/base.html — dark sidebar navigation (240px, fixed), top header (breadcrumbs + username + role badge + logout button), main content area, flash message slot, HTMX attributes, Bootstrap 5 and HTMX loaded from /vendor/
+- [x] 0.12 Create templates/layout/sidebar.html fragment — role-based menu items using sec:authorize, active state detection, icons (Bootstrap Icons or inline SVG)
+- [x] 0.13 Create templates/error/403.html, 404.html, 500.html — styled error pages with "why blocked" message for 403, navigation back to dashboard
+- [x] 0.14 Create WebConfig.java (@Configuration): static resource handlers, multipart config (50MB max file size, 200MB max request size), HTMX response header helper
+- [x] 0.15 Create repo/Dockerfile — eclipse-temurin:17-jdk-alpine builder stage (./mvnw package -DskipTests), eclipse-temurin:17-jre-alpine runtime stage, COPY target/*.jar app.jar, ENTRYPOINT
+- [x] 0.16 Create repo/Dockerfile.test — maven:3.9-eclipse-temurin-17-alpine, COPY pom.xml + src, RUN chmod +x run_tests.sh, CMD ["sh", "run_tests.sh"]
+- [x] 0.17 Create repo/docker-compose.yml — exact content from CLAUDE.md (mysql + app services, healthcheck, volumes). CRITICAL: All environment variable values must be hardcoded strings — no ${VAR} syntax anywhere. No .env file. QA runs docker compose up --build with zero configuration.
+- [x] 0.18 Create repo/docker-compose.test.yml — mysql-test service (port 3307) + test-runner service that depends on mysql-test healthy
+- [x] 0.19 Create repo/run_tests.sh — exact content from CLAUDE.md, chmod +x
+- [x] 0.20 Create HealthController.java: GET /actuator/health returns 200 with {status: UP} — no auth required
+- [x] 0.21 Verify: ./mvnw compile --no-transfer-progress succeeds with zero errors. Fix all compile errors before marking done.
 
 **Phase 0 checkpoint: ./mvnw compile succeeds. All Docker files created. README matches CLAUDE.md template exactly.**
 

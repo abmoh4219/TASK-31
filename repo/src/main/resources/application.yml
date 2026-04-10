@@ -1,0 +1,92 @@
+# Retail Campaign Governance — Application Configuration
+# All values are HARDCODED. No environment variable references (${...}) are allowed in this file.
+# QA must be able to run this project with zero configuration.
+spring:
+  application:
+    name: retail-campaign
+  datasource:
+    url: jdbc:mysql://localhost:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&createDatabaseIfNotExist=true
+    username: retail_user
+    password: retail_pass
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+  thymeleaf:
+    cache: false
+    mode: HTML
+    encoding: UTF-8
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 200MB
+  mvc:
+    hiddenmethod:
+      filter:
+        enabled: true
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+  servlet:
+    session:
+      timeout: 30m
+
+logging:
+  level:
+    root: INFO
+    com.meridian.retail: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+# Application-specific settings (all hardcoded)
+app:
+  upload:
+    path: /app/uploads
+    max-file-size-bytes: 52428800
+    chunk-size-bytes: 1048576
+  backup:
+    path: /app/backups
+    retention-days: 14
+  encryption:
+    key: retail-campaign-aes-key-32chars!!
+  signing:
+    secret: retail-campaign-hmac-signing-key!!
+  rate-limit:
+    standard: 60
+    export: 10
+  temp-link:
+    expiry-minutes: 10
+  lockout:
+    account-max-attempts: 5
+    account-window-minutes: 15
+    ip-max-attempts: 20
+    ip-window-minutes: 60
+  captcha:
+    show-after-failures: 3

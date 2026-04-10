@@ -1,0 +1,49 @@
+# Retail Campaign Governance — Production compose file.
+# CRITICAL: All values are HARDCODED. No ${VAR} references. No .env file.
+# QA runs `docker compose up --build` and that is the entire setup.
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: retail-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: retail_campaign
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_USER: retail_user
+      MYSQL_PASSWORD: retail_pass
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "retail_user", "-pretail_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: retail-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC"
+      SPRING_DATASOURCE_USERNAME: retail_user
+      SPRING_DATASOURCE_PASSWORD: retail_pass
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      APP_ENCRYPTION_KEY: "retail-campaign-aes-key-32chars!!"
+      APP_SIGNING_SECRET: "retail-campaign-hmac-signing-key!!"
+      SPRING_PROFILES_ACTIVE: docker
+    volumes:
+      - upload-data:/app/uploads
+      - backup-data:/app/backups
+
+volumes:
+  mysql-data:
+  upload-data:
+  backup-data:

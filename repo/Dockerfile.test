@@ -1,0 +1,19 @@
+# Test image — runs unit and integration tests.
+# Uses a Maven-bundled image so we don't depend on the wrapper here.
+FROM maven:3.9-eclipse-temurin-17-alpine
+WORKDIR /build
+
+# Docker-in-Docker socket needed for Testcontainers; the compose file mounts it.
+RUN apk add --no-cache docker-cli
+
+COPY pom.xml ./
+COPY .mvn/ .mvn/
+COPY mvnw ./
+RUN chmod +x mvnw
+
+COPY src/ src/
+COPY run_tests.sh ./
+RUN chmod +x run_tests.sh
+
+ENV TESTCONTAINERS_RYUK_DISABLED=true
+CMD ["sh", "run_tests.sh"]

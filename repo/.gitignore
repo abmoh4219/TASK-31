@@ -1,0 +1,16 @@
+target/
+*.class
+*.jar
+*.war
+*.log
+mysql-data/
+uploads/
+backups/
+.DS_Store
+.idea/
+*.iml
+.vscode/
+*.swp
+.classpath
+.project
+.settings/

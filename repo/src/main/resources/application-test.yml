@@ -1,0 +1,27 @@
+# Test profile — Testcontainers provides a real MySQL instance.
+# The DataSource URL is rewritten by AbstractIntegrationTest@DynamicPropertySource.
+# We allow ddl-auto=create ONLY in this profile so that test slices that don't run Flyway
+# can still bootstrap a schema. Integration tests that exercise Flyway override this.
+spring:
+  datasource:
+    url: jdbc:tc:mysql:8.0:///retail_campaign_test
+    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: false
+  flyway:
+    enabled: false
+  thymeleaf:
+    cache: false
+
+logging:
+  level:
+    root: WARN
+    com.meridian.retail: DEBUG
+
+app:
+  upload:
+    path: /tmp/retail-test/uploads
+  backup:
+    path: /tmp/retail-test/backups

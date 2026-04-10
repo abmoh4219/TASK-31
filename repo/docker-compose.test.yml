@@ -1,0 +1,16 @@
+# Test compose — runs unit + integration tests with Testcontainers.
+# Tests use Testcontainers (jdbc:tc:mysql:8.0:///...) so the test image must be able to
+# launch containers. We expose the host docker socket for that purpose.
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: retail-test-runner
+    environment:
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+      TESTCONTAINERS_HOST_OVERRIDE: "host.docker.internal"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

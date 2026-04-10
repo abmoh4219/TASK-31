@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<body>
+<aside th:fragment="sidebar" class="app-sidebar">
+    <div class="brand">
+        <h1>Retail Campaign</h1>
+        <small>Governance & Integrity</small>
+    </div>
+    <nav>
+        <div class="nav-section">Workspace</div>
+
+        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/dashboard}">
+            <i class="bi bi-grid-fill"></i> Admin Dashboard
+        </a>
+        <a sec:authorize="hasAnyRole('OPERATIONS','REVIEWER','CUSTOMER_SERVICE','ADMIN','FINANCE')"
+           th:href="@{/campaigns}">
+            <i class="bi bi-megaphone"></i> Campaigns
+        </a>
+        <a sec:authorize="hasAnyRole('OPERATIONS','ADMIN')" th:href="@{/upload}">
+            <i class="bi bi-cloud-upload"></i> Upload Files
+        </a>
+        <a sec:authorize="hasAnyRole('OPERATIONS','REVIEWER','ADMIN')" th:href="@{/content}">
+            <i class="bi bi-files"></i> Content Integrity
+        </a>
+
+        <div class="nav-section" sec:authorize="hasAnyRole('REVIEWER','ADMIN')">Review</div>
+        <a sec:authorize="hasAnyRole('REVIEWER','ADMIN')" th:href="@{/approval/queue}">
+            <i class="bi bi-check2-square"></i> Approval Queue
+        </a>
+
+        <div class="nav-section" sec:authorize="hasAnyRole('FINANCE','ADMIN')">Analytics</div>
+        <a sec:authorize="hasAnyRole('FINANCE','ADMIN','OPERATIONS')" th:href="@{/analytics/dashboard}">
+            <i class="bi bi-bar-chart"></i> Analytics
+        </a>
+
+        <div class="nav-section" sec:authorize="hasRole('ADMIN')">Administration</div>
+        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/users}">
+            <i class="bi bi-people"></i> Users
+        </a>
+        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/audit-log}">
+            <i class="bi bi-shield-lock"></i> Audit Log
+        </a>
+        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/anomaly-alerts}">
+            <i class="bi bi-exclamation-triangle"></i> Anomaly Alerts
+        </a>
+        <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/backup}">
+            <i class="bi bi-hdd"></i> Backups
+        </a>
+    </nav>
+</aside>
+</body>
+</html>
