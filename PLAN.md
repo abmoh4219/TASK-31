@@ -12,6 +12,9 @@
 > Complete all tasks continuously, then pause. Wait for "proceed".
 
 - [x] 0.1 Create repo/.gitignore with content from CLAUDE.md — note: no .env or .env.* entries since this project has no .env file and requires zero manual configuration
+- [x] 0.1b Create repo/.env.example (committed to git — contains all default values)
+- [x] 0.1c Add .env to .gitignore (auto-generated file, never committed)
+- [x] 0.1d docker-compose.yml uses setup service to auto-copy .env.example → .env on first run
 - [x] 0.2 Create repo/README.md (minimal, exact format from CLAUDE.md)
 - [x] 0.3 Create repo/pom.xml — Spring Boot 3.2.x parent, Java 17, all dependencies from CLAUDE.md. Include maven-wrapper-plugin so ./mvnw works inside Docker.
 - [x] 0.4 Generate Maven wrapper: create .mvn/wrapper/maven-wrapper.properties pointing to Maven 3.9.x, create mvnw shell script (chmod +x)
@@ -229,7 +232,12 @@
 - [ ] 8.1 Final security audit: grep -r "@PermitAll\|permitAll()" src/main — must only be /login, /captcha/**, /actuator/health, /static/**. Fix any over-permissive rules.
 - [ ] 8.2 Final audit log audit: list every service method that writes to DB → verify AuditLogService.log() is called. Add any missing calls. Comment each call with "// AUDIT: reason"
 - [ ] 8.3 Final System.out.println audit: grep -r "System.out.println" src/main/java — must return zero results. Replace any found with log.info/warn/error via SLF4J.
-- [ ] 8.4 Final configuration audit: grep -r "\${" src/main/resources/application.yml — must return zero results (no ${ENV_VAR} references allowed — all values must be hardcoded so QA needs zero configuration). Verify docker-compose.yml has no ${VAR} syntax either.
+- [ ] 8.4 Final configuration audit:
+       (a) .env.example exists at repo/.env.example and is NOT listed in .gitignore
+       (b) .env IS listed in .gitignore (auto-generated file, never committed)
+       (c) docker-compose.yml uses env_file: [.env] — no inline hardcoded environment: values
+       (d) setup service in docker-compose.yml auto-copies .env.example to .env on first run
+       (e) QA flow test: delete .env → docker compose up --build → .env auto-created → app starts → all 5 logins work
 - [ ] 8.5 Write complete missing unit tests to cover all service classes:
        AuthServiceTest, CampaignServiceTest, CouponServiceTest, ApprovalServiceTest,
        DualApprovalServiceTest, FingerprintServiceTest, DuplicateDetectionServiceTest,

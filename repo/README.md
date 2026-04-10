@@ -5,6 +5,7 @@
 docker compose up --build
 ```
 Open http://localhost:8080
+(.env is created automatically from .env.example on first run — no manual setup needed)
 
 ## Test
 ```bash
