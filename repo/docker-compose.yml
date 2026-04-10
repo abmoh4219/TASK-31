@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
 
   setup:
@@ -20,8 +18,17 @@ services:
 
   mysql:
     image: mysql:8.0
+    # env_file is loaded after setup creates .env on first run.
+    # required:false allows compose-up to parse cleanly when .env doesn't yet exist
+    # (the variable-substitution defaults below cover that first-run case).
     env_file:
-      - .env
+      - path: .env
+        required: false
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-retail_campaign}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_USER: ${MYSQL_USER:-retail_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-retail_pass}
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -40,7 +47,16 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - .env
+      - path: .env
+        required: false
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://mysql:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-retail_user}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:-retail_pass}
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-com.mysql.cj.jdbc.Driver}
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:-retail-campaign-aes-key-32chars!!}
+      APP_SIGNING_SECRET: ${APP_SIGNING_SECRET:-retail-campaign-hmac-signing-key!!}
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
     depends_on:
       mysql:
         condition: service_healthy

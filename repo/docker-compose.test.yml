@@ -1,8 +1,5 @@
-# Test compose — runs unit + integration tests with Testcontainers.
-# Tests use Testcontainers (jdbc:tc:mysql:8.0:///...) so the test image must be able to
-# launch containers. We expose the host docker socket for that purpose.
-version: '3.8'
-
+# Test compose — single entry point for QA.
+# Run:  docker compose -f docker-compose.test.yml run --build test
 services:
 
   setup:
@@ -24,7 +21,14 @@ services:
   mysql-test:
     image: mysql:8.0
     env_file:
-      - .env
+      - path: .env
+        required: false
+    environment:
+      # The test database is always retail_campaign_test to isolate from the prod database
+      MYSQL_DATABASE: retail_campaign_test
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_USER: ${MYSQL_USER:-retail_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-retail_pass}
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "retail_user", "-pretail_pass"]
       interval: 10s
@@ -38,15 +42,18 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.test
-    container_name: retail-test-runner
-    env_file:
-      - .env
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
-      setup:
-        condition: service_completed_successfully
       mysql-test:
         condition: service_healthy
+      setup:
+        condition: service_completed_successfully
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: test
+      IT_DATASOURCE_URL: jdbc:mysql://mysql-test:3306/retail_campaign_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      IT_DATASOURCE_USERNAME: retail_user
+      IT_DATASOURCE_PASSWORD: retail_pass
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+    # NO command: override — Dockerfile.test CMD ["sh", "run_tests.sh"] runs automatically

@@ -5,32 +5,56 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Base class for all integration tests. Spins up a real MySQL 8 container via Testcontainers
- * and points the Spring Boot data source at it. Flyway is enabled here so the tests exercise
- * the same migrations production runs.
+ * Base class for all integration tests.
+ *
+ * Two modes:
+ *   1. LOCAL DEV — Testcontainers spins up a fresh MySQL 8 container per JVM run (started
+ *      lazily in {@link #registerProps}).
+ *   2. INSIDE docker-compose.test.yml — the {@code mysql-test} service is already running on
+ *      the same docker network. We detect this via the IT_DATASOURCE_URL environment variable
+ *      and skip Testcontainers entirely (Testcontainers' "host.docker.internal" port mapping
+ *      cannot reach a docker-spawned container from inside another container).
+ *
+ * In either mode Flyway runs the real migrations and {@code ddl-auto} is forced to "validate".
+ *
+ * Note: We deliberately do NOT use {@code @Testcontainers} / {@code @Container} annotations
+ * because they require an always-non-null container field, which prevents the conditional
+ * external-DB mode.
  */
 @SpringBootTest
 @ActiveProfiles("test")
-@Testcontainers
 public abstract class AbstractIntegrationTest {
 
-    @Container
-    @SuppressWarnings("resource") // container is reused for the JVM lifetime
-    static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
-            .withDatabaseName("retail_campaign_test")
-            .withUsername("retail_user")
-            .withPassword("retail_pass");
+    private static final String EXTERNAL_URL = System.getenv("IT_DATASOURCE_URL");
+    private static final boolean USE_EXTERNAL = EXTERNAL_URL != null && !EXTERNAL_URL.isBlank();
+
+    private static MySQLContainer<?> MYSQL;
 
     @DynamicPropertySource
     static void registerProps(DynamicPropertyRegistry r) {
-        if (!MYSQL.isRunning()) MYSQL.start();
-        r.add("spring.datasource.url", MYSQL::getJdbcUrl);
-        r.add("spring.datasource.username", MYSQL::getUsername);
-        r.add("spring.datasource.password", MYSQL::getPassword);
+        if (USE_EXTERNAL) {
+            // Inside docker-compose.test.yml — connect to the sibling mysql-test service.
+            r.add("spring.datasource.url", () -> EXTERNAL_URL);
+            r.add("spring.datasource.username",
+                    () -> System.getenv().getOrDefault("IT_DATASOURCE_USERNAME", "retail_user"));
+            r.add("spring.datasource.password",
+                    () -> System.getenv().getOrDefault("IT_DATASOURCE_PASSWORD", "retail_pass"));
+        } else {
+            // Local dev — lazily start a single MySQL container shared across the whole JVM.
+            if (MYSQL == null) {
+                MYSQL = new MySQLContainer<>("mysql:8.0")
+                        .withDatabaseName("retail_campaign_test")
+                        .withUsername("retail_user")
+                        .withPassword("retail_pass");
+                MYSQL.start();
+                Runtime.getRuntime().addShutdownHook(new Thread(MYSQL::stop));
+            }
+            r.add("spring.datasource.url", MYSQL::getJdbcUrl);
+            r.add("spring.datasource.username", MYSQL::getUsername);
+            r.add("spring.datasource.password", MYSQL::getPassword);
+        }
         r.add("spring.datasource.driver-class-name", () -> "com.mysql.cj.jdbc.Driver");
         r.add("spring.flyway.enabled", () -> "true");
         r.add("spring.jpa.hibernate.ddl-auto", () -> "validate");

@@ -98,9 +98,13 @@ public class SecurityConfig {
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 .maximumSessions(3)   // allow a few concurrent sessions per user
             )
-            .exceptionHandling(eh -> eh
-                .accessDeniedPage("/error/403")
-            );
+            // No explicit accessDeniedPage. Spring Security's default access-denied handler
+            // sets HTTP 403 and forwards to /error, where Spring Boot's BasicErrorController
+            // automatically selects templates/error/403.html based on the status code.
+            // (accessDeniedPage("/error/403") was removed because it does a literal URL
+            // forward — and there is no controller mapping for /error/403, so the dispatch
+            // would fall through to the static-resource handler and return a confusing 404.)
+            ;
 
         // Custom filters in order. Rate limit runs first so an attacker hammering /login
         // gets throttled before any heavy work; nonce validation runs before signing so

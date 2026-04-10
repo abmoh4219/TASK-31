@@ -1,19 +1,20 @@
-# Test image — runs unit and integration tests.
-# Uses a Maven-bundled image so we don't depend on the wrapper here.
-FROM maven:3.9-eclipse-temurin-17-alpine
-WORKDIR /build
+FROM maven:3.9-eclipse-temurin-17-alpine AS test-runner
 
-# Docker-in-Docker socket needed for Testcontainers; the compose file mounts it.
-RUN apk add --no-cache docker-cli
+# This image already has mvn installed globally — no mvnw or .mvn wrapper needed.
+# QA machines do not need Maven installed locally. Everything runs inside this container.
 
+WORKDIR /app
+
+# Cache dependencies layer — uses system mvn, not ./mvnw
 COPY pom.xml ./
-COPY .mvn/ .mvn/
-COPY mvnw ./
-RUN chmod +x mvnw
+RUN mvn dependency:go-offline --no-transfer-progress -q
 
+# Copy source
 COPY src/ src/
+
+# Copy test runner script — uses system mvn internally
 COPY run_tests.sh ./
 RUN chmod +x run_tests.sh
 
-ENV TESTCONTAINERS_RYUK_DISABLED=true
+# Single entry point — QA runs: docker compose -f docker-compose.test.yml run --build test
 CMD ["sh", "run_tests.sh"]

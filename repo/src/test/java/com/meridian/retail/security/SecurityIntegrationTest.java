@@ -39,7 +39,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
                         .param("password", "wrong-password")
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
-                .andExpect(redirectedUrlPattern("**/login?error**"));
+                .andExpect(redirectedUrl("/login?error"));
     }
 
     @Test
@@ -68,6 +68,43 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
     @WithMockUser(username = "admin", roles = {"ADMIN"})
     void adminCanReachAdminDashboard() throws Exception {
         mockMvc.perform(get("/admin/dashboard"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "cs", roles = {"CUSTOMER_SERVICE"})
+    void csUserCannotAccessAdminAuditLog() throws Exception {
+        mockMvc.perform(get("/admin/audit-log"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "ops", roles = {"OPERATIONS"})
+    void opsUserCannotReachApprovalQueue() throws Exception {
+        mockMvc.perform(get("/approval/queue"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "finance", roles = {"FINANCE"})
+    void financeUserCannotReachContentMerge() throws Exception {
+        mockMvc.perform(post("/content/merge")
+                        .param("masterId", "1")
+                        .param("duplicateIds", "2")
+                        .with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "ops", roles = {"OPERATIONS"})
+    void opsUserCannotExportAnalytics() throws Exception {
+        mockMvc.perform(get("/analytics/export"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void healthEndpointPublic() throws Exception {
+        mockMvc.perform(get("/health"))
                 .andExpect(status().isOk());
     }
 }
