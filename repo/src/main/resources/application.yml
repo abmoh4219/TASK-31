@@ -2,7 +2,7 @@
 #
 # IMPORTANT: this file contains NO plaintext secrets. Every sensitive value is sourced
 # from an environment variable with no built-in default — the app will refuse to start
-# if a secret is missing. docker-compose.yml and docker-compose.test.yml supply working
+# if a secret is missing. docker-compose.yml (app + test profile) supplies working
 # local-dev defaults via `${VAR:-default}`, so `docker compose up --build` still works
 # out of the box. In production, set the env vars from a secret manager.
 #

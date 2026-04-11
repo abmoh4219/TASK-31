@@ -12,9 +12,10 @@ import org.testcontainers.containers.MySQLContainer;
  * Two modes:
  *   1. LOCAL DEV — Testcontainers spins up a fresh MySQL 8 container per JVM run (started
  *      lazily in {@link #registerProps}).
- *   2. INSIDE docker-compose.test.yml — the {@code mysql-test} service is already running on
- *      the same docker network. We detect this via the IT_DATASOURCE_URL environment variable
- *      and skip Testcontainers entirely (Testcontainers' "host.docker.internal" port mapping
+ *   2. INSIDE the compose `test` profile — the {@code mysql-test} sibling service from
+ *      docker-compose.yml (profiles: ["test"]) is already running on the same docker
+ *      network. We detect this via the IT_DATASOURCE_URL environment variable and skip
+ *      Testcontainers entirely (Testcontainers' "host.docker.internal" port mapping
  *      cannot reach a docker-spawned container from inside another container).
  *
  * In either mode Flyway runs the real migrations and {@code ddl-auto} is forced to "validate".
@@ -35,7 +36,7 @@ public abstract class AbstractIntegrationTest {
     @DynamicPropertySource
     static void registerProps(DynamicPropertyRegistry r) {
         if (USE_EXTERNAL) {
-            // Inside docker-compose.test.yml — connect to the sibling mysql-test service.
+            // Inside the compose `test` profile — connect to the sibling mysql-test service.
             r.add("spring.datasource.url", () -> EXTERNAL_URL);
             r.add("spring.datasource.username",
                     () -> System.getenv().getOrDefault("IT_DATASOURCE_USERNAME", "retail_user"));

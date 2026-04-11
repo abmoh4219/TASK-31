@@ -5,21 +5,18 @@ echo "========================================"
 echo "  Retail Campaign Test Suite"
 echo "========================================"
 
-# Use system mvn from the maven:3.9-eclipse-temurin-17-alpine base image
-# Never use ./mvnw — QA machines may not have Maven wrapper locally installed
-# and the Docker image already has mvn available globally
+# Use system mvn from the maven:3.9-eclipse-temurin-17-alpine base image.
+# QA machines may not have the Maven wrapper locally — Docker image has mvn globally.
 MVN="mvn --no-transfer-progress"
 
 UNIT_FAILED=0
 INTEGRATION_FAILED=0
 
 echo ""
-echo "--- Unit Tests (Mockito + plain JUnit, no Spring context, no DB) ---"
-# Unit tests here are pure Mockito tests under src/test/java/com/meridian/retail/service,
-# security, backup. They do NOT load Spring and do NOT touch MySQL — safe to run on any
-# machine. (The *Policy/*Filter/*Validator/*Service name patterns all match this set.)
+echo "--- Unit Tests (com.meridian.retail.unit.**) ---"
+echo "    Pure JUnit/Mockito, no Spring context, no MySQL."
+# Surefire is scoped to com/meridian/retail/unit/** in pom.xml.
 $MVN test \
-  -Dtest="*ServiceTest,*FilterTest,*ValidatorTest,*UtilTest,*MapperTest,*PolicyTest,*SafetyTest" \
   -DfailIfNoTests=false \
   -Dspring.profiles.active=test 2>&1 || UNIT_FAILED=1
 
@@ -30,15 +27,15 @@ else
 fi
 
 echo ""
-echo "--- Integration Tests (full Spring context + REAL MySQL 8) ---"
-# Integration tests boot @SpringBootTest and require a live MySQL 8 instance. Under
-# docker-compose.test.yml the tests connect to the sibling mysql-test service (via the
-# IT_DATASOURCE_URL env var set in that compose file). Outside compose, the
-# AbstractIntegrationTest base class starts a Testcontainers MySQL instance on demand.
-# These tests are the only ones that touch the DB and verify Flyway migrations, JPA
-# schema validation, and the @PreAuthorize filter chain end-to-end.
-$MVN test \
-  -Dtest="*IntegrationTest,*IT,SecurityIntegrationTest" \
+echo "--- Integration Tests (com.meridian.retail.integration.**) ---"
+echo "    @SpringBootTest + real MySQL 8 (Testcontainers or mysql-test sibling)."
+# Failsafe is scoped to com/meridian/retail/integration/** in pom.xml.
+# `verify` drives the integration-test + verify goals from the failsafe plugin.
+# `-Dskip.surefire.tests` would also work, but `-DskipTests` on surefire lets the
+# `verify` phase still execute failsafe. We use -Dsurefire.skip=true explicitly so
+# the unit phase is not re-run here.
+$MVN verify \
+  -Dsurefire.skip=true \
   -DfailIfNoTests=false \
   -Dspring.profiles.active=test 2>&1 || INTEGRATION_FAILED=1
 
@@ -52,10 +49,12 @@ echo ""
 echo "========================================"
 if [ $UNIT_FAILED -eq 0 ] && [ $INTEGRATION_FAILED -eq 0 ]; then
   echo "  ALL TESTS PASSED"
+  echo "  Unit:        PASS"
+  echo "  Integration: PASS"
   exit 0
 else
   echo "  SOME TESTS FAILED"
-  echo "  Unit: $([ $UNIT_FAILED -eq 0 ] && echo PASS || echo FAIL)"
+  echo "  Unit:        $([ $UNIT_FAILED -eq 0 ] && echo PASS || echo FAIL)"
   echo "  Integration: $([ $INTEGRATION_FAILED -eq 0 ] && echo PASS || echo FAIL)"
   exit 1
 fi

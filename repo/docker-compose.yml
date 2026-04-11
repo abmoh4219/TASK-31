@@ -1,3 +1,15 @@
+# Unified compose file.
+#
+#   App + MySQL (default):
+#       docker compose up --build
+#
+#   Test suite (unit + integration via run_tests.sh):
+#       docker compose run --rm --build test
+#
+# The `test` service is gated behind the `test` profile so a bare
+# `docker compose up` does not start it. The test service uses its own
+# `mysql-test` database (also in the `test` profile) for isolation from
+# the prod-style retail_campaign database used by the app service.
 services:
 
   setup:
@@ -76,6 +88,60 @@ services:
     volumes:
       - upload-data:/app/uploads
       - backup-data:/app/backups
+
+  # --- test stack (gated behind `test` profile) --------------------------------
+  # Only started when the `test` profile is explicitly activated, e.g.
+  #     docker compose run --rm --build test
+  # so a plain `docker compose up` starts just the app + mysql services.
+
+  mysql-test:
+    image: mysql:8.0
+    profiles: ["test"]
+    command:
+      - --log-bin-trust-function-creators=ON
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Isolated test DB — never touches retail_campaign (app data).
+      MYSQL_DATABASE: retail_campaign_test
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_USER: ${MYSQL_USER:-retail_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-retail_pass}
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "retail_user", "-pretail_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      mysql-test:
+        condition: service_healthy
+      setup:
+        condition: service_completed_successfully
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      SPRING_PROFILES_ACTIVE: test
+      IT_DATASOURCE_URL: jdbc:mysql://mysql-test:3306/retail_campaign_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      IT_DATASOURCE_USERNAME: retail_user
+      IT_DATASOURCE_PASSWORD: retail_pass
+      # Secrets for the encryption + signing layer. Defaults match application.yml so
+      # the test context can round-trip at-rest encrypted fields.
+      DB_PASSWORD: ${DB_PASSWORD:-retail_pass}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-retail-campaign-aes-key-32chars!!}
+      HMAC_KEY: ${HMAC_KEY:-retail-campaign-hmac-signing-key!!}
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+    # Dockerfile.test CMD ["sh", "run_tests.sh"] runs automatically.
 
 volumes:
   mysql-data:

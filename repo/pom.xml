@@ -183,6 +183,44 @@
                 <artifactId>maven-wrapper-plugin</artifactId>
                 <version>3.2.0</version>
             </plugin>
+            <!--
+              Surefire (`mvn test`) runs unit tests only — anything under
+              com.meridian.retail.unit.**. Pure JUnit/Mockito, no Spring context, no MySQL.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <includes>
+                        <include>com/meridian/retail/unit/**/*Test.java</include>
+                        <include>com/meridian/retail/unit/**/*Tests.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+            <!--
+              Failsafe (`mvn verify`) runs integration tests only — anything under
+              com.meridian.retail.integration.**. @SpringBootTest + real MySQL via
+              Testcontainers (or mysql-test sibling under docker-compose).
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <includes>
+                        <include>com/meridian/retail/integration/**/*Test.java</include>
+                        <include>com/meridian/retail/integration/**/*Tests.java</include>
+                        <include>com/meridian/retail/integration/**/*IT.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

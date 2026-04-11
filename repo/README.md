@@ -9,7 +9,7 @@ Open http://localhost:8080
 
 ## Test
 ```bash
-docker compose -f docker-compose.test.yml run --build test
+docker compose --profile test run --rm --build test
 ```
 
 ## Stop

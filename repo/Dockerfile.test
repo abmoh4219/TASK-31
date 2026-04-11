@@ -16,5 +16,5 @@ COPY src/ src/
 COPY run_tests.sh ./
 RUN chmod +x run_tests.sh
 
-# Single entry point — QA runs: docker compose -f docker-compose.test.yml run --build test
+# Single entry point — QA runs: docker compose --profile test run --rm --build test
 CMD ["sh", "run_tests.sh"]

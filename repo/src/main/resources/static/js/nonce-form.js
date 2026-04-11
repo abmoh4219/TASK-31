@@ -45,8 +45,15 @@
     }
 
     function signEndpointFor(action) {
-        // RequestSigningFilter is scoped to /admin/**, so signing is required only there.
         if (action.indexOf('/admin/') === 0) return '/admin/sign-form';
+        // Approval completion endpoints are now covered by RequestSigningFilter —
+        // fetch a signature from the approval sign-form endpoint (REVIEWER + ADMIN).
+        if (action.indexOf('/approval/') === 0
+                && (action.indexOf('/approve-first') !== -1
+                    || action.indexOf('/approve-second') !== -1
+                    || action.indexOf('/dual-approve/') !== -1)) {
+            return '/approval/sign-form';
+        }
         return null;
     }
 

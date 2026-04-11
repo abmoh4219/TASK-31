@@ -8,6 +8,14 @@
   - **Partially Fixed:** 0
   - **Not Fixed / Still Partial:** 0
 
+> **Update:** `RequestSigningFilter` now also covers the approval completion
+> endpoints (`POST /approval/{id}/approve-first`, `POST /approval/{id}/approve-second`,
+> `POST /approval/dual-approve/**`), closing the prior signing-scope gap on the
+> high-risk dual-approval surface. Browser flows fetch a server-issued
+> `_signature` from `POST /approval/sign-form`, and new integration tests in
+> `SecurityIntegrationTest` assert both accept (valid signature) and reject
+> (missing / invalid signature) paths.
+
 Static-only boundary: this check is based on source/templates/docs inspection only; no runtime execution, Docker, or tests were run.
 
 ---

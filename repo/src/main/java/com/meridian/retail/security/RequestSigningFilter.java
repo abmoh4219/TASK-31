@@ -136,10 +136,15 @@ public class RequestSigningFilter extends OncePerRequestFilter {
     private boolean appliesTo(HttpServletRequest request) {
         if (!"POST".equalsIgnoreCase(request.getMethod())) return false;
         String uri = request.getRequestURI();
-        // Sign-form endpoint issues the very signature this filter validates — exclude
-        // it to avoid a chicken-and-egg loop. Spring Security role checks still gate it.
-        if (uri.equals("/admin/sign-form")) return false;
-        return uri.startsWith("/admin/");
+        // Sign-form endpoints issue the very signature this filter validates — exclude
+        // them to avoid a chicken-and-egg loop. Spring Security role checks still gate them.
+        if (uri.equals("/admin/sign-form") || uri.equals("/approval/sign-form")) return false;
+        if (uri.startsWith("/admin/")) return true;
+        // Approval completion endpoints: POST /approval/{id}/approve-first,
+        // POST /approval/{id}/approve-second, POST /approval/dual-approve/**.
+        if (uri.startsWith("/approval/dual-approve/")) return true;
+        return uri.startsWith("/approval/")
+                && (uri.endsWith("/approve-first") || uri.endsWith("/approve-second"));
     }
 
     /**
