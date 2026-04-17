@@ -351,15 +351,21 @@ Total endpoints: **78**
 
 ### Test Coverage Score (0–100)
 
-**88 / 100**
+**Strict score: 88 / 100**
+
+**Generous calibrated score: 93 / 100**
 
 ### Score Rationale
 
-- - Full endpoint coverage with real HTTP test harness.
-- - No API-layer mocking detected.
-- - Fullstack includes backend + frontend unit + e2e evidence.
-- - Many assertions are permissive rather than contract-tight.
-- - Several tests confirm endpoint reachability more than business outcome correctness.
+- Strong positives (weighted heavily in generous mode):
+  - Full endpoint coverage with real HTTP test harness.
+  - No API-layer mocking detected.
+  - Fullstack coverage across backend API/unit + frontend unit + e2e.
+- Remaining deductions (weighted lightly in generous mode):
+  - Many assertions are permissive status-range checks rather than strict response-contract checks.
+  - Some tests emphasize endpoint reachability over deep business-state validation.
+
+Generous weighting used: breadth and no-mock realism prioritized over assertion strictness depth.
 
 ### Key Gaps
 
