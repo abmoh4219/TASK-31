@@ -61,36 +61,15 @@ fi
 echo ""
 echo "--- [4/4] Playwright E2E Tests ---"
 echo "    Headless Chromium against the real running Spring Boot app."
+echo "    docker compose starts mysql+app and waits for service_healthy before launching."
 
-# Start app + mysql (default profile)
-docker compose up -d mysql app
-
-echo "Waiting for app to become healthy..."
-WAIT=0
-until docker compose exec -T app wget -qO- http://localhost:8080/health > /dev/null 2>&1; do
-  WAIT=$((WAIT + 5))
-  if [ $WAIT -ge 180 ]; then
-    echo "App did not start within 180 s — skipping e2e tests."
-    E2E_FAILED=1
-    break
-  fi
-  sleep 5
-done
-
-if [ $E2E_FAILED -eq 0 ]; then
-  # Reuse the already-pulled Playwright image (mcr.microsoft.com/playwright:v1.59.1-jammy).
-  # Mount the e2e folder and point BASE_URL at the app service on the retail-net network.
-  docker run --rm \
-    --network retail-net \
-    -v "${SCRIPT_DIR}/src/test/e2e:/e2e" \
-    -e BASE_URL=http://app:8080 \
-    mcr.microsoft.com/playwright:v1.59.1-jammy \
-    sh -c "cd /e2e && npm install --silent && npx playwright install chromium && npx playwright test" 2>&1 \
-    || E2E_FAILED=1
-fi
+# The playwright service (profile: e2e-test) declares depends_on: app: service_healthy.
+# docker compose handles starting mysql → app → playwright in the correct order
+# and waits for the app healthcheck to pass before running any Playwright tests.
+docker compose --profile e2e-test run --rm --build playwright 2>&1 || E2E_FAILED=1
 
 # Tear down the app stack (leave no containers running)
-docker compose down
+docker compose down --remove-orphans 2>/dev/null || true
 
 if [ $E2E_FAILED -eq 0 ]; then
   echo "✅ Playwright E2E Tests PASSED"

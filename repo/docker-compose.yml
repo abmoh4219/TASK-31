@@ -103,9 +103,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.test
-    command: >
-      sh -c "mvn test --no-transfer-progress -DfailIfNoTests=false
-             -Dspring.profiles.active=test"
+    command: sh -c "mvn test --no-transfer-progress -DfailIfNoTests=false -Dspring.profiles.active=test"
     environment:
       SPRING_PROFILES_ACTIVE: test
       ENCRYPTION_KEY: retail-campaign-aes-key-32chars!!
@@ -143,9 +141,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.test
-    command: >
-      sh -c "mvn verify -Dsurefire.skip=true --no-transfer-progress
-             -DfailIfNoTests=false -Dspring.profiles.active=test"
+    command: sh -c "mvn verify -Dsurefire.skip=true --no-transfer-progress -DfailIfNoTests=false -Dspring.profiles.active=test"
     depends_on:
       mysql-test:
         condition: service_healthy
@@ -163,6 +159,24 @@ services:
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-retail-campaign-aes-key-32chars!!}
       HMAC_KEY: ${HMAC_KEY:-retail-campaign-hmac-signing-key!!}
       TESTCONTAINERS_RYUK_DISABLED: "true"
+
+  # ── Playwright e2e test service ─────────────────────────────────────────────
+  # Profile: e2e-test
+  # Waits for the app healthcheck (service_healthy) before launching Chromium.
+  playwright:
+    profiles: ["e2e-test"]
+    image: mcr.microsoft.com/playwright:v1.59.1-jammy
+    working_dir: /e2e
+    volumes:
+      - ./src/test/e2e:/e2e
+    environment:
+      BASE_URL: http://app:8080
+    command: sh -c "npm install --silent && npx playwright install chromium && npx playwright test"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - retail-net
 
 volumes:
   mysql-data:

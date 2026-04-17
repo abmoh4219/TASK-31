@@ -1,6 +1,10 @@
 # Docker profile — overrides for the in-container runtime.
 # Datasource still prefers environment variables (compose sets them), with defaults
 # pointing to the mysql service defined in docker-compose.yml.
+server:
+  ssl:
+    enabled: false
+
 spring:
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
