@@ -6,7 +6,9 @@ const { defineConfig, devices } = require('@playwright/test');
  *
  * Headless mode is REQUIRED — Docker has no display server.
  * Base URL is configurable via BASE_URL env var so tests work both locally
- * (http://localhost:8080) and inside Docker (http://app:8080).
+ * (https://localhost:8080) and inside Docker (https://app:8080).
+ * ignoreHTTPSErrors is required because the embedded Tomcat uses a self-signed
+ * certificate; Chromium would otherwise refuse the connection.
  */
 module.exports = defineConfig({
   testDir: './tests',
@@ -16,7 +18,7 @@ module.exports = defineConfig({
 
   use: {
     headless: true,
-    baseURL: process.env.BASE_URL || 'http://localhost:8080',
+    baseURL: process.env.BASE_URL || 'https://localhost:8080',
     screenshot: 'only-on-failure',
     video: 'off',
     ignoreHTTPSErrors: true,

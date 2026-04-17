@@ -170,7 +170,7 @@ services:
     volumes:
       - ./src/test/e2e:/e2e
     environment:
-      BASE_URL: http://app:8080
+      BASE_URL: https://app:8080
     command: sh -c "npm install --silent && npx playwright install chromium && npx playwright test"
     depends_on:
       app:
