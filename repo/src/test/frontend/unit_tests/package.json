@@ -1,0 +1,23 @@
+{
+  "name": "retail-campaign-frontend-tests",
+  "private": true,
+  "scripts": {
+    "test": "jest --coverage --coverageProvider=v8 --testPathPattern='test/frontend/unit_tests'"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "jest": {
+    "rootDir": "../../..",
+    "testEnvironment": "jsdom",
+    "testMatch": ["**/test/frontend/unit_tests/**/*.test.js"],
+    "collectCoverage": true,
+    "collectCoverageFrom": [
+      "main/resources/static/js/**/*.js"
+    ],
+    "coverageProvider": "v8",
+    "coverageDirectory": "test/frontend/unit_tests/coverage",
+    "coverageReporters": ["text", "lcov"]
+  }
+}

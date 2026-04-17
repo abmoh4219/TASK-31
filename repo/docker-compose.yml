@@ -3,13 +3,18 @@
 #   App + MySQL (default):
 #       docker compose up --build
 #
-#   Test suite (unit + integration via run_tests.sh):
-#       docker compose run --rm --build test
+#   Backend unit tests only (no DB):
+#       docker compose --profile unit-test run --rm --build unit-test
 #
-# The `test` service is gated behind the `test` profile so a bare
-# `docker compose up` does not start it. The test service uses its own
-# `mysql-test` database (also in the `test` profile) for isolation from
-# the prod-style retail_campaign database used by the app service.
+#   Backend API tests (real MySQL via Testcontainers in docker-in-docker, OR
+#   via the sibling mysql-test service when running inside the compose network):
+#       docker compose --profile api-test run --rm --build api-test
+#
+#   Frontend JS unit tests (Jest):
+#       See run_tests.sh — runs via plain docker run with node:20-alpine.
+#
+#   Playwright e2e tests (headless, against the running app):
+#       See run_tests.sh — starts mysql+app, then runs playwright container.
 services:
 
   setup:
@@ -30,14 +35,8 @@ services:
 
   mysql:
     image: mysql:8.0
-    # --log-bin-trust-function-creators=ON lets non-SUPER users (retail_user) install
-    # stored-routine/trigger objects without needing binary-logging SUPER privileges.
-    # Required for V14__audit_log_immutability.sql which installs triggers at app start.
     command:
       - --log-bin-trust-function-creators=ON
-    # env_file is loaded after setup creates .env on first run.
-    # required:false allows compose-up to parse cleanly when .env doesn't yet exist
-    # (the variable-substitution defaults below cover that first-run case).
     env_file:
       - path: .env
         required: false
@@ -56,6 +55,8 @@ services:
     depends_on:
       setup:
         condition: service_completed_successfully
+    networks:
+      - retail-net
 
   app:
     build:
@@ -69,12 +70,9 @@ services:
     environment:
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:mysql://mysql:3306/retail_campaign?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:-retail_user}
-      # DB_PASSWORD is the canonical name. SPRING_DATASOURCE_PASSWORD kept as a
-      # legacy alias so existing operator docs don't break.
       DB_PASSWORD: ${DB_PASSWORD:-retail_pass}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-retail_pass}
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:-com.mysql.cj.jdbc.Driver}
-      # New canonical env vars per BLOCKER #1 fix — encrypted secrets layer.
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-retail-campaign-aes-key-32chars!!}
       HMAC_KEY: ${HMAC_KEY:-retail-campaign-hmac-signing-key!!}
       APP_ENCRYPTION_KEY: ${ENCRYPTION_KEY:-retail-campaign-aes-key-32chars!!}
@@ -88,22 +86,42 @@ services:
     volumes:
       - upload-data:/app/uploads
       - backup-data:/app/backups
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - retail-net
 
-  # --- test stack (gated behind `test` profile) --------------------------------
-  # Only started when the `test` profile is explicitly activated, e.g.
-  #     docker compose run --rm --build test
-  # so a plain `docker compose up` starts just the app + mysql services.
+  # ── Backend unit test service (no DB) ──────────────────────────────────────
+  # Profile: unit-test
+  # Runs: mvn test (Surefire scoped to com.meridian.retail.unit.**)
+  unit-test:
+    profiles: ["unit-test"]
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    command: >
+      sh -c "mvn test --no-transfer-progress -DfailIfNoTests=false
+             -Dspring.profiles.active=test"
+    environment:
+      SPRING_PROFILES_ACTIVE: test
+      ENCRYPTION_KEY: retail-campaign-aes-key-32chars!!
+      HMAC_KEY: retail-campaign-hmac-signing-key!!
+      DB_PASSWORD: retail_pass
 
+  # ── MySQL for API tests ─────────────────────────────────────────────────────
   mysql-test:
     image: mysql:8.0
-    profiles: ["test"]
+    profiles: ["api-test"]
     command:
       - --log-bin-trust-function-creators=ON
     env_file:
       - path: .env
         required: false
     environment:
-      # Isolated test DB — never touches retail_campaign (app data).
       MYSQL_DATABASE: retail_campaign_test
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
       MYSQL_USER: ${MYSQL_USER:-retail_user}
@@ -117,11 +135,17 @@ services:
       setup:
         condition: service_completed_successfully
 
-  test:
-    profiles: ["test"]
+  # ── Backend API test service (real MySQL via Testcontainers or sibling) ─────
+  # Profile: api-test
+  # Runs: mvn verify (Failsafe scoped to com.meridian.retail.api.**)
+  api-test:
+    profiles: ["api-test"]
     build:
       context: .
       dockerfile: Dockerfile.test
+    command: >
+      sh -c "mvn verify -Dsurefire.skip=true --no-transfer-progress
+             -DfailIfNoTests=false -Dspring.profiles.active=test"
     depends_on:
       mysql-test:
         condition: service_healthy
@@ -135,15 +159,16 @@ services:
       IT_DATASOURCE_URL: jdbc:mysql://mysql-test:3306/retail_campaign_test?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       IT_DATASOURCE_USERNAME: retail_user
       IT_DATASOURCE_PASSWORD: retail_pass
-      # Secrets for the encryption + signing layer. Defaults match application.yml so
-      # the test context can round-trip at-rest encrypted fields.
       DB_PASSWORD: ${DB_PASSWORD:-retail_pass}
       ENCRYPTION_KEY: ${ENCRYPTION_KEY:-retail-campaign-aes-key-32chars!!}
       HMAC_KEY: ${HMAC_KEY:-retail-campaign-hmac-signing-key!!}
       TESTCONTAINERS_RYUK_DISABLED: "true"
-    # Dockerfile.test CMD ["sh", "run_tests.sh"] runs automatically.
 
 volumes:
   mysql-data:
   upload-data:
   backup-data:
+
+networks:
+  retail-net:
+    name: retail-net

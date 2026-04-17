@@ -161,6 +161,12 @@
             <version>1.19.3</version>
             <scope>test</scope>
         </dependency>
+        <!-- Apache HttpClient 5 for TestRestTemplate with cookie/no-redirect support -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -215,9 +221,9 @@
                 </executions>
                 <configuration>
                     <includes>
-                        <include>com/meridian/retail/integration/**/*Test.java</include>
-                        <include>com/meridian/retail/integration/**/*Tests.java</include>
-                        <include>com/meridian/retail/integration/**/*IT.java</include>
+                        <include>com/meridian/retail/api/**/*Test.java</include>
+                        <include>com/meridian/retail/api/**/*Tests.java</include>
+                        <include>com/meridian/retail/api/**/*IT.java</include>
                     </includes>
                 </configuration>
             </plugin>

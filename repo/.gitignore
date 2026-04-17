@@ -21,3 +21,10 @@ backups/
 
 .claude/
 convert-ai-sessions.py
+
+# Frontend and e2e test dependencies (installed by Docker at runtime)
+src/test/frontend/unit_tests/node_modules/
+src/test/frontend/unit_tests/coverage/
+src/test/e2e/node_modules/
+src/test/e2e/test-results/
+src/test/e2e/playwright-report/

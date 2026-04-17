@@ -5,16 +5,19 @@ FROM maven:3.9-eclipse-temurin-17-alpine AS test-runner
 
 WORKDIR /app
 
-# Cache dependencies layer — uses system mvn, not ./mvnw
+# Cache dependencies layer
 COPY pom.xml ./
+COPY mvnw ./
+COPY .mvn/ .mvn/
+RUN chmod +x mvnw
 RUN mvn dependency:go-offline --no-transfer-progress -q
 
 # Copy source
 COPY src/ src/
 
-# Copy test runner script — uses system mvn internally
+# Copy test runner script
 COPY run_tests.sh ./
 RUN chmod +x run_tests.sh
 
-# Single entry point — QA runs: docker compose --profile test run --rm --build test
+# Default CMD runs both unit + api tests (legacy path — prefer docker compose profiles)
 CMD ["sh", "run_tests.sh"]
