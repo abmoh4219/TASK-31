@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/base}">
+<head><title>Export Analytics</title></head>
+<body>
+<div layout:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>Export Analytics</h2>
+            <p class="text-muted mb-0">Download coupon redemption data as CSV.</p>
+        </div>
+        <a th:href="@{/analytics/dashboard}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <h5 class="card-title mb-3"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Redemption Data Export</h5>
+            <p class="text-muted">Exports all coupon redemption records including store, campaign, discount amount, and timestamp.</p>
+            <a th:href="@{/analytics/export/download}" class="btn btn-primary">
+                <i class="bi bi-download me-1"></i> Download CSV
+            </a>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -3,7 +3,14 @@
 # pointing to the mysql service defined in docker-compose.yml.
 server:
   ssl:
-    enabled: false
+    key-store: classpath:keystore.p12
+    key-store-password: changeit
+    key-store-type: PKCS12
+    key-alias: tomcat
+  tomcat:
+    accept-count: 500
+    threads:
+      max: 400
 
 spring:
   datasource:

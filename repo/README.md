@@ -66,7 +66,7 @@ docker compose up --build
 docker-compose up --build
 ```
 
-Open http://localhost:8080
+Open https://localhost:8080 (self-signed certificate — accept the browser warning)
 
 ## Testing
 
@@ -82,15 +82,15 @@ The script orchestrates all four suites through Docker. No local tooling needed.
 
 After starting the app with `docker compose up --build`, confirm it is working:
 
-1. Open http://localhost:8080 — confirm the login page loads with a username and password form.
+1. Open https://localhost:8080 — accept the self-signed certificate warning, then confirm the login page loads.
 2. Log in with `admin` / `Admin@Retail2024!` — confirm you reach the Admin Dashboard showing system statistics.
 3. Log out, then log in with each other role and confirm the correct landing page:
    - `ops` / `Ops@Retail2024!` → Campaign list
    - `reviewer` / `Review@Retail2024!` → Approval Queue
    - `finance` / `Finance@Retail2024!` → Analytics Dashboard
    - `cs` / `CsUser@Retail2024!` → Coupon Lookup
-4. Visit http://localhost:8080/health — confirm the response is `{"status":"UP","service":"retail-campaign"}`.
-5. While logged in as `ops`, try to access http://localhost:8080/admin/dashboard — confirm it redirects back to the login page or shows a 403 Forbidden response.
+4. Visit https://localhost:8080/health — confirm the response is `{"status":"UP","service":"retail-campaign"}`.
+5. While logged in as `ops`, try to access https://localhost:8080/admin/dashboard — confirm it redirects back to the login page or shows a 403 Forbidden response.
 
 ## Seeded Credentials
 

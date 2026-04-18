@@ -49,6 +49,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
 
+        // Static resources and infrastructure paths are excluded — only page/API requests count.
+        String uri = request.getRequestURI();
+        if (uri.startsWith("/css/") || uri.startsWith("/js/") || uri.startsWith("/vendor/")
+                || uri.startsWith("/actuator") || uri.startsWith("/error")
+                || uri.startsWith("/captcha/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         // Anonymous traffic is excluded — login attempts have their own IP-based throttling.
         String username = currentUsername();
         if (username == null) {
@@ -56,7 +65,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        boolean isExport = request.getRequestURI().startsWith("/analytics/export");
+        boolean isExport = uri.startsWith("/analytics/export/download");
         long capacity = isExport ? exportLimit : standardLimit;
         String bucketKey = (isExport ? "export:" : "standard:") + username;
 

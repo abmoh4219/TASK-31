@@ -87,11 +87,15 @@ services:
       - upload-data:/app/uploads
       - backup-data:/app/backups
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      test: ["CMD-SHELL", "wget --no-check-certificate -qO- https://localhost:8080/health || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 10
       start_period: 60s
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     networks:
       - retail-net
 
@@ -170,7 +174,7 @@ services:
     volumes:
       - ./src/test/e2e:/e2e
     environment:
-      BASE_URL: http://app:8080
+      BASE_URL: https://app:8080
     command: sh -c "npm install --silent && npx playwright install chromium && npx playwright test"
     depends_on:
       app:

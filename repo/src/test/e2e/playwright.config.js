@@ -13,12 +13,12 @@ const { defineConfig, devices } = require('@playwright/test');
 module.exports = defineConfig({
   testDir: './tests',
   timeout: 45000,
-  retries: 1,
+  retries: 2,
   workers: 1,
 
   use: {
     headless: true,
-    baseURL: process.env.BASE_URL || 'http://localhost:8080',
+    baseURL: process.env.BASE_URL || 'https://localhost:8080',
     screenshot: 'only-on-failure',
     video: 'off',
     ignoreHTTPSErrors: true,

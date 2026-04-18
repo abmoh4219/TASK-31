@@ -13,6 +13,11 @@ async function login(page, username, password) {
   await page.click('button[type="submit"]');
 }
 
+test('anonymous user is redirected to login', async ({ page }) => {
+  await page.goto('/campaigns');
+  await expect(page).toHaveURL(/login/);
+});
+
 test.describe('Login page', () => {
   test('shows sign-in form', async ({ page }) => {
     await page.goto('/login');
@@ -112,11 +117,6 @@ test.describe('Access control', () => {
       url.includes('login') || url.includes('403') || body.includes('403') || body.includes('Forbidden')
       || !body.includes('User Management') // if it renders the page it shouldn't have admin items
     ).toBeTruthy();
-  });
-
-  test('anonymous user is redirected to login', async ({ page }) => {
-    await page.goto('/campaigns');
-    await expect(page).toHaveURL(/login/);
   });
 
   test('cs cannot access approval queue', async ({ page }) => {

@@ -42,6 +42,11 @@ public class LoginController {
         return "auth/login";
     }
 
+    @GetMapping("/error/403")
+    public String forbidden() {
+        return "error/403";
+    }
+
     /** Root route — Spring Security forwards to /login if anonymous; if authenticated, send to / via dashboard router. */
     @GetMapping("/")
     public String root() {

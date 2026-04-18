@@ -86,11 +86,19 @@ public class AnalyticsController {
         return Map.of("points", points);
     }
 
-    /**
-     * CSV export — Finance/Admin only.
-     * RateLimitFilter restricts /analytics/export/** to 10/min/user (60/min for everything else).
-     */
+    /** Export page — Finance/Admin only. Renders the export UI with a download button. */
     @GetMapping("/export")
+    @PreAuthorize("hasAnyRole('FINANCE','ADMIN')")
+    public String exportPage(Model model) {
+        model.addAttribute("breadcrumb", "Export");
+        return "analytics/export";
+    }
+
+    /**
+     * CSV download — Finance/Admin only.
+     * RateLimitFilter restricts /analytics/export/download to 10/min/user.
+     */
+    @GetMapping("/export/download")
     @PreAuthorize("hasAnyRole('FINANCE','ADMIN')")
     public ResponseEntity<StreamingResponseBody> exportCsv(Authentication auth, HttpServletRequest request) {
         sensitiveAccessLogService.logAccess("analytics_export", "CouponRedemption", null,
