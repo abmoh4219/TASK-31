@@ -18,7 +18,7 @@ module.exports = defineConfig({
 
   use: {
     headless: true,
-    baseURL: process.env.BASE_URL || 'https://localhost:8080',
+    baseURL: process.env.BASE_URL || 'http://localhost:8080',
     screenshot: 'only-on-failure',
     video: 'off',
     ignoreHTTPSErrors: true,
