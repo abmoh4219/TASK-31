@@ -65,7 +65,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        boolean isExport = uri.startsWith("/analytics/export/download");
+        boolean isExport = uri.startsWith("/analytics/export/");
         long capacity = isExport ? exportLimit : standardLimit;
         String bucketKey = (isExport ? "export:" : "standard:") + username;
 
